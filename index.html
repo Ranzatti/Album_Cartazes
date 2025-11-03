@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Cartazes de Filmes (Supabase)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'fundo-claro': '#eeeeee', // Cinza claro quase branco
+                        'principal': '#3b82f6',    // Azul padrão para destaque (ex: + Novo)
+                        'suave': '#e5e7eb',        // Cinza bem claro para cards/bordas
+                        'texto-suave': '#6b7280',  // Cinza médio para texto secundário
+                        'destaque-card': '#bfdbfe', // Azul claro sutil para hover/botoes
+                        'danger': '#ef4444',       // Vermelho padrão para Excluir
+                        'edit': '#10b981',         // Verde para Editar
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .card-poster {
+            width: 100%;
+            height: 200px;
+            object-fit: contain; /* Ajusta a imagem inteira dentro do contêiner */
+            background-color: #f3f4f6; /* Fundo cinza para preencher o espaço extra */
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+        }
+
+        #poster-preview {
+            width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 0.5rem;
+            background-color: #f3f4f6;
+        }
+
+        .poster-area {
+            position: relative;
+            overflow: hidden; /* Garante que nada transborde */
+        }
+
+        .input-uppercase {
+            text-transform: uppercase;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+
+<body class="bg-fundo-claro min-h-screen p-4 sm:p-8">
+
+<div class="max-w-7xl mx-auto">
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
+            🎬 Catálogo de Cartazes
+            <span id="contador-registros"
+                  class="ml-4 text-base font-semibold bg-principal text-white px-3 py-1 rounded-full">
+                    00 Registros
+                </span>
+        </h1>
+
+        <button id="btn-novo-filme"
+                class="bg-principal hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
+            <i class="fas fa-plus mr-2"></i> NOVO
+        </button>
+    </header>
+
+    <div class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
+        <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+            <i class="fas fa-sort-amount-down-alt mr-2 text-texto-suave"></i> OPÇÕES E BUSCA
+        </h2>
+
+        <div class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <div class="flex-grow">
+                    <label for="filtro-titulo" class="block text-sm font-medium text-gray-700 mb-1">Buscar por
+                        Título:</label>
+                    <input type="text" id="filtro-titulo" placeholder="Digite o título ou parte dele..."
+                           class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                </div>
+
+                <div class="sm:w-36">
+                    <label for="filtro-ano" class="block text-sm font-medium text-gray-700 mb-1">Buscar por Ano:</label>
+                    <input type="number" id="filtro-ano" placeholder="Ex: 1999"
+                           class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 items-center border-t pt-3 border-suave">
+            <span class="text-sm font-semibold text-gray-700">Ordenação:</span>
+            <select id="sort-criterio"
+                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                <option value="id">ID</option>
+                <option value="data_release" selected>Ano</option>
+                <option value="titulo_original">Título Original</option>
+                <option value="titulo_traduzido">Título Traduzido</option>
+            </select>
+
+            <select id="sort-ordem"
+                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                <option value="crescente">Crescente</option>
+                <option value="decrescente">Decrescente</option>
+            </select>
+
+            <button id="btn-aplicar-ordenacao"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg text-sm transition duration-300">
+                <i class="fas fa-check mr-1"></i> Aplicar
+            </button>
+        </div>
+    </div>
+
+    <main id="grade-filmes"
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <p id="msg-sem-filmes" class="col-span-full text-center text-texto-suave italic hidden">Nenhum filme catalogado.
+            Use o botão "+ NOVO" para começar!</p>
+    </main>
+
+</div>
+
+<div id="modal-filme" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 overflow-y-auto max-h-[90vh]">
+        <div class="p-6 border-b border-suave flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-sort-amount-down-alt mr-2 text-texto-suave"></i> OPÇÕES E BUSCA
+            </h2>
+            <h2 id="modal-titulo" class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+                <i class="fas fa-film mr-2 text-texto-suave"></i> Título do Filme - Catálogo
+            </h2>
+            <button id="btn-fechar-modal" class="text-gray-500 hover:text-danger text-xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="form-filme" class="p-6 space-y-4">
+            <input type="hidden" id="filme-id">
+
+            <div class="border p-4 rounded-lg bg-gray-50 mb-4">
+                <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-search mr-2"></i> SELECIONE O MODO DE BUSCA
+                </h3>
+                <div class="flex gap-6">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="modoBusca" id="radio-busca-titulo" value="titulo" checked
+                               class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                        <span class="ml-2 text-sm text-gray-700 font-semibold">Busca por Título (TMDb)</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="modoBusca" id="radio-busca-tmdb-id" value="id"
+                               class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                        <span class="ml-2 text-sm text-gray-700 font-semibold">Busca por ID (TMDb)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="busca-id-container" class="border p-4 rounded-lg bg-gray-50">
+                <h3 class="font-semibold text-gray-700 mb-3 flex items-center"><i class="fas fa-barcode mr-2"></i>
+                    Buscar por ID (TMDb)</h3>
+                <div class="flex gap-2">
+                    <input type="number" id="tmdb-id-busca" placeholder="Código TMDb (Ex: 550)"
+                           class="flex-grow p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    <button type="button" id="btn-buscar-tmdb-id"
+                            class="bg-destaque-card hover:bg-blue-300 text-principal font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <p id="busca-id-msg" class="text-xs text-danger mt-1 hidden">Erro na busca ou filme não encontrado.</p>
+            </div>
+
+            <div id="busca-titulo-container" class="border p-4 rounded-lg bg-gray-50 hidden">
+                <h3 class="font-semibold text-gray-700 mb-3 flex items-center"><i class="fas fa-film mr-2"></i> Buscar
+                    Filme por Título (TMDb)</h3>
+                <div class="flex gap-2 mb-2">
+                    <input type="text" id="busca-titulo" placeholder="Título do filme (em português)"
+                           class="flex-grow p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    <button type="button" id="btn-buscar-titulo"
+                            class="bg-destaque-card hover:bg-blue-300 text-principal font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div id="resultados-busca-titulo" class="max-h-40 overflow-y-auto space-y-1">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div class="md:col-span-2">
+                    <label for="titulo-traduzido" class="block text-sm font-medium text-gray-700">Título Traduzido <span
+                            class="text-danger">*</span></label>
+                    <input type="text" id="titulo-traduzido" required
+                           class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal input-uppercase">
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-3 gap-4">
+                    <div class="col-span-2">
+                        <label for="titulo-original" class="block text-sm font-medium text-gray-700">Título
+                            Original</label>
+                        <input type="text" id="titulo-original"
+                               class="mt-1 block w-full p-2 bg-gray-100 border border-suave rounded-lg text-gray-600 input-uppercase"
+                               readonly>
+                    </div>
+                    <div>
+                        <label for="data-release" class="block text-sm font-medium text-gray-700">Data
+                            Lançamento</label>
+                        <input type="date" id="data-release"
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-3 gap-4">
+                    <div>
+                        <label for="ano" class="block text-sm font-medium text-gray-700">Ano <span
+                                class="text-danger">*</span></label>
+                        <input type="number" id="ano" required
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+                    <div>
+                        <label for="codigo-tmdb" class="block text-sm font-medium text-gray-700">Código TMDb <span
+                                class="text-danger">*</span></label>
+                        <input type="number" id="codigo-tmdb" required
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+                    <div>
+                        <label for="codigo-imdb" class="block text-sm font-medium text-gray-700">Código IMDB</label>
+                        <input type="text" id="codigo-imdb"
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Cor</label>
+                        <div class="flex items-center space-x-4 mt-1">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="tipoCor" id="radio-pb" value="Preto-Branco"
+                                       class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                                <span class="ml-2 text-sm text-gray-700">P/B</span>
+                            </label>
+                            <label class="flex items-center cursor-pointer">
+                                <input type="radio" name="tipoCor" id="radio-cores" value="Cores" checked
+                                       class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                                <span class="ml-2 text-sm text-gray-700">Cor</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="pagina" class="block text-sm font-medium text-gray-700">Página</label>
+                        <input type="text" id="pagina"
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+
+                    <div>
+                        <label for="pasta" class="block text-sm font-medium text-gray-700">Pasta</label>
+                        <input type="text" id="pasta"
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pré-visualização do Cartaz</label>
+                    <img id="poster-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                         alt="Pré-visualização do Cartaz" class="p-2 border border-suave rounded-lg max-w-full">
+                </div>
+                <div>
+                    <label for="sinopse" class="block text-sm font-medium text-gray-700">Sinopse</label>
+                    <textarea id="sinopse" rows="18"
+                              class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal resize-none"></textarea>
+                </div>
+            </div>
+
+            <div>
+                <label for="link-imagem" class="block text-sm font-medium text-gray-700">Link da Imagem do Cartaz <span
+                        class="text-danger">*</span></label>
+                <input type="url" id="link-imagem" required
+                       class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+            </div>
+
+            <div id="cartazes-alternativos-container" class="border p-4 rounded-lg bg-gray-50 hidden">
+                <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-images mr-2"></i> Cartazes Alternativos
+                </h3>
+                <div id="cartazes-lista" class="flex overflow-x-auto space-x-3 p-1">
+                    <p class="text-sm text-texto-suave" id="msg-sem-cartazes">Carregando cartazes...</p>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-suave">
+                <button type="button" id="btn-cancelar"
+                        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-300">
+                    <i class="fas fa-times mr-1"></i> Cancelar
+                </button>
+                <button type="submit" id="btn-salvar"
+                        class="bg-edit hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300">
+                    <i class="fas fa-save mr-1"></i> Salvar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- CONSTANTES E VARIÁVEIS GLOBAIS ---
+
+    // ** 1. CREDENCIAIS SUPABASE (Substitua por suas chaves reais!) **
+    const SUPABASE_URL = 'https://kngdhvmwmbcnrcutuuqm.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuZ2Rodm13bWJjbnJjdXR1dXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1NTAzODksImV4cCI6MjA1MzEyNjM4OX0.iSycpy-YlpkiBpw4PC-0n4AIN0gxGs6OparYc5C0d20';
+    const SUPABASE_TABLE = 'album';
+
+    // ** 2. INICIALIZAÇÃO SUPABASE (CORRIGIDO: Usando a função createClient global) **
+    // Este é o passo que estava causando o erro de inicialização
+    const {createClient} = supabase; // Desestrutura a função para uso direto
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // --- Variáveis TMDb ---
+    const TMDB_API_KEY = '2b0120b7e901bbe70b631b2273fe28c9';
+    const BASE_IMAGE_URL = 'https://image.tmdb.org/t/p/w500';
+    const BASE_THUMB_URL = 'https://image.tmdb.org/t/p/w92';
+
+    let filmes = []; // Array local para armazenar os dados do Supabase
+    let editandoId = null;
+
+    // --- REFERÊNCIAS DE ELEMENTOS DOM (Mantidas as mesmas) ---
+    const modal = document.getElementById('modal-filme');
+    const modalTitulo = document.getElementById('modal-titulo');
+    const btnNovoFilme = document.getElementById('btn-novo-filme');
+    const btnFecharModal = document.getElementById('btn-fechar-modal');
+    const btnCancelar = document.getElementById('btn-cancelar');
+    const formFilme = document.getElementById('form-filme');
+    const gradeFilmes = document.getElementById('grade-filmes');
+    const msgSemFilmes = document.getElementById('msg-sem-filmes');
+
+    const inputID = document.getElementById('filme-id');
+    const inputTMDBBusca = document.getElementById('tmdb-id-busca');
+    const btnBuscarTMDBID = document.getElementById('btn-buscar-tmdb-id');
+    const inputTituloTraduzido = document.getElementById('titulo-traduzido');
+    const inputAno = document.getElementById('ano');
+    const inputCodigoTMDB = document.getElementById('codigo-tmdb');
+    const inputCodigoIMDB = document.getElementById('codigo-imdb');
+    const inputDataRelease = document.getElementById('data-release');
+    const radioPB = document.getElementById('radio-pb');
+    const radioCores = document.getElementById('radio-cores');
+    const inputPagina = document.getElementById('pagina');
+    const inputPasta = document.getElementById('pasta');
+    const inputLinkImagem = document.getElementById('link-imagem');
+    const inputTituloOriginal = document.getElementById('titulo-original');
+    const inputSinopse = document.getElementById('sinopse');
+    const posterPreview = document.getElementById('poster-preview');
+
+    const cartazesAlternativosContainer = document.getElementById('cartazes-alternativos-container');
+    const cartazesLista = document.getElementById('cartazes-lista');
+    const msgSemCartazes = document.getElementById('msg-sem-cartazes');
+
+    const sortCriterio = document.getElementById('sort-criterio');
+    const sortOrdem = document.getElementById('sort-ordem');
+    const btnAplicarOrdenacao = document.getElementById('btn-aplicar-ordenacao');
+
+    const inputBuscaTitulo = document.getElementById('busca-titulo');
+    const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
+    const resultadosBuscaTitulo = document.getElementById('resultados-busca-titulo');
+    const buscaIDMsg = document.getElementById('busca-id-msg');
+    const contadorRegistros = document.getElementById('contador-registros');
+
+    const inputFiltroTitulo = document.getElementById('filtro-titulo');
+    const inputFiltroAno = document.getElementById('filtro-ano');
+
+    const radioBuscaTMDBId = document.getElementById('radio-busca-tmdb-id');
+    const radioBuscaTitulo = document.getElementById('radio-busca-titulo');
+    const buscaIdContainer = document.getElementById('busca-id-container');
+    const buscaTituloContainer = document.getElementById('busca-titulo-container');
+
+
+    // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
+
+    /** Carrega os filmes do Supabase, ordenando pelo critério selecionado (agora inclui 'data'). */
+    async function carregarFilmes() {
+        // Obtém o critério (que agora será 'data', 'id', 'titulo_original' ou 'titulo_traduzido')
+        const criterio = sortCriterio.value;
+        const isAscending = sortOrdem.value === 'crescente';
+
+        // O Supabase ordena por um único critério (o valor do select)
+        const {data, error} = await supabaseClient
+            .from(SUPABASE_TABLE)
+            .select('*')
+            .order(criterio, {ascending: isAscending});
+
+        if (error) {
+            console.error('Erro ao carregar filmes:', error);
+            alert('Erro ao carregar filmes do banco de dados. Verifique a chave e RLS.');
+            return;
+        }
+
+        filmes = data || [];
+
+        // 1. ATUALIZA CONTADOR
+        contadorRegistros.textContent = `${filmes.length.toString().padStart(2, '0')} Registros`;
+
+        // 2. Renderiza (e aplica o filtro de texto local)
+        renderizarFilmes();
+    }
+
+    // --- FUNÇÕES DO MODAL/FORMULÁRIO ---
+
+    /** Alterna a exibição entre o campo de busca por ID e por Título. */
+    function alternarBusca(modo) {
+        if (modo === 'id') {
+            buscaIdContainer.classList.remove('hidden');
+            buscaTituloContainer.classList.add('hidden');
+        } else if (modo === 'titulo') {
+            buscaIdContainer.classList.add('hidden');
+            buscaTituloContainer.classList.remove('hidden');
+        }
+    }
+
+    /** Mapeia dados do Supabase para os campos do formulário (Filme -> Formulário) */
+    function preencherFormulario(filme) {
+        editandoId = filme.id;
+
+        modalTitulo.textContent = `Editar Filme (ID: ${filme.id})`;
+
+        // Mapeamento das colunas da tabela 'album' para os campos do formulário
+        inputID.value = filme.id;
+        inputTituloTraduzido.value = filme.titulo_traduzido || '';
+        inputAno.value = filme.ano;
+        inputCodigoTMDB.value = filme.tmdb;
+        inputCodigoIMDB.value = filme.imdb || '';
+
+        // Tipo de Cor (coluna 'cores')
+        if (filme.cores === 'Preto-Branco') {
+            radioPB.checked = true;
+        } else {
+            radioCores.checked = true;
+        }
+
+        inputPagina.value = filme.pagina || '';
+        inputPasta.value = filme.pasta || '';
+        inputLinkImagem.value = filme.link_imagem || '';
+        inputDataRelease.value = filme.data_release || '';
+        inputTituloOriginal.value = filme.titulo_original || '';
+        inputSinopse.value = filme.sinopse || '';
+        posterPreview.src = filme.link_imagem || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+        inputTMDBBusca.value = filme.tmdb;
+        resultadosBuscaTitulo.innerHTML = '';
+        buscaIDMsg.classList.add('hidden');
+        cartazesAlternativosContainer.classList.add('hidden');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        buscarCartazes(filme.tmdb);
+    }
+
+    /** Abre o modal e preenche com os dados do filme para edição. */
+    function abrirModalEdicao(id) {
+        const filme = filmes.find(f => f.id === id);
+        if (!filme) return;
+
+        preencherFormulario(filme);
+    }
+
+    /** Limpa e abre o modal para um novo cadastro. */
+    function abrirModalNovo() {
+        editandoId = null;
+        modalTitulo.textContent = 'Adicionar Novo Filme';
+        formFilme.reset();
+        inputTMDBBusca.value = '';
+        radioCores.checked = true;
+        posterPreview.src = 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+        resultadosBuscaTitulo.innerHTML = '';
+        buscaIDMsg.classList.add('hidden');
+        cartazesAlternativosContainer.classList.add('hidden');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    /** Fecha o modal. */
+    function fecharModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    /** Lida com o envio do formulário (Adicionar ou Editar) no Supabase. */
+    formFilme.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const tipoCorSelecionado = document.querySelector('input[name="tipoCor"]:checked');
+
+        // Mapeamento dos campos do formulário para as COLUNAS da tabela 'album'
+        const dadosFilme = {
+            tmdb: getIntOrNull(inputCodigoTMDB.value),
+            imdb: inputCodigoIMDB.value.trim() || null,
+            titulo_original: inputTituloOriginal.value.trim().toUpperCase() || null,
+            titulo_traduzido: inputTituloTraduzido.value.trim().toUpperCase() || null,
+            pagina: inputPagina.value.trim() || 0,
+            pasta: inputPasta.value.trim() || 0,
+            data_release: inputDataRelease.value.trim() || null,
+            ano: getIntOrNull(inputAno.value),
+            link_imagem: inputLinkImagem.value.trim() || null,
+            sinopse: inputSinopse.value.trim() || null,
+            cores: tipoCorSelecionado ? tipoCorSelecionado.value : 'Cores',
+        };
+
+        let error = null;
+
+        if (editandoId) {
+            // MODO EDIÇÃO
+            const response = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .update(dadosFilme)
+                .eq('id', editandoId); // Usa o ID do Supabase para o WHERE
+            error = response.error;
+        } else {
+            // MODO NOVO
+            const response = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .insert([dadosFilme]);
+            error = response.error;
+        }
+
+        if (error) {
+            console.error('Erro ao salvar no Supabase:', error);
+            alert(`Erro ao salvar: ${error.message}. Verifique o RLS.`);
+        } else {
+            await carregarFilmes();
+            fecharModal();
+        }
+    });
+
+    // --- FUNÇÕES DE RENDERIZAÇÃO E ORDENAÇÃO ---
+
+    /** Cria o HTML de um card de filme e retorna um Node. */
+    function criarCardFilme(filme) {
+        // Cria um elemento DIV que será o card (Node)
+        const card = document.createElement('div');
+        // Adiciona o grupo de hover no card
+        card.className = 'group bg-white rounded-lg shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-suave';
+        card.setAttribute('data-id', filme.id);
+
+        // Usa innerHTML para preencher o conteúdo
+        card.innerHTML = `
+                <div class="poster-area">
+                    <img src="${filme.link_imagem || 'https://via.placeholder.com/500x750?text=Sem+Cartaz'}"
+                         alt="${filme.titulo_traduzido} Cartaz"
+                         class="card-poster">
+
+                    <div class="absolute inset-0 flex flex-col justify-end p-2 bg-black bg-opacity-40
+                                transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 px-1 bg-edit/90 hover:bg-edit text-white font-semibold rounded-lg transition duration-300 btn-editar" data-id="${filme.id}">
+                                <i class="fas fa-edit mr-1"></i> Editar
+                            </button>
+                            <button class="flex-1 py-2 px-1 bg-danger/90 hover:bg-danger text-white font-semibold rounded-lg transition duration-300 btn-excluir" data-id="${filme.id}">
+                                <i class="fas fa-trash-alt mr-1"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 text-center">
+                    <h3 class="text-sm font-bold text-gray-800 truncate" title="${filme.titulo_traduzido}">${filme.titulo_traduzido}</h3>
+
+                    ${filme.titulo_original ? `<p class="text-xs text-texto-suave truncate italic mt-[-2px] mb-1" title="Título Original">${filme.titulo_original}</p>` : ''}
+
+                    <p class="text-xs text-texto-suave flex justify-center items-center space-x-2">
+                        <a href="https://www.themoviedb.org/movie/${filme.tmdb}" target="_blank" class="text-principal hover:underline font-semibold flex items-center" title="Ver filme no TMDb">
+                            <i class="fas fa-ticket-alt mr-1 text-gray-500"></i> ${filme.tmdb}
+                        </a>
+
+                        ${filme.imdb ? `
+                        <a href="https://www.imdb.com/title/${filme.imdb}" target="_blank" class="text-principal hover:underline font-semibold flex items-center" title="Ver filme no IMDb">
+                            <i class="fas fa-star mr-1 text-yellow-500"></i> ${filme.imdb}
+                        </a>
+                        ` : ''}
+                    </p>
+
+                    <p class="text-xs text-texto-suave truncate">
+                        ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
+                        ${(filme.pagina && filme.pasta) ? ` | ` : ''}
+                        ${filme.pasta ? `Pasta: ${filme.pasta}` : ''}
+                    </p>
+
+                    <p class="text-xs font-semibold mt-1 text-texto-suave">
+                        <span class="text-gray-500">${filme.id}</span>
+                        <span class="text-gray-500 ml-1">|</span>
+                        <span>${filme.ano}</span>
+                        <span class="ml-1">
+                            | ${filme.cores || 'Cores'}
+                        </span>
+                    </p>
+                </div>
+            `;
+        // Retorna o elemento DIV (o Node)
+        return card;
+    }
+
+    /** Ordena a lista localmente. A ordenação principal é feita na consulta Supabase. */
+    function ordenarFilmes(filmesArray) {
+        const criterio = sortCriterio.value;
+        const ordem = sortOrdem.value;
+
+        return filmesArray.sort((a, b) => {
+            let valA, valB;
+
+            // Mapeamento dos campos para as colunas do Supabase
+            switch (criterio) {
+                case 'id':
+                    valA = a.id;
+                    valB = b.id;
+                    break;
+                case 'ano':
+                    valA = a.ano;
+                    valB = b.ano;
+                    break;
+                case 'titulo_original':
+                    valA = a.titulo_original.toLowerCase();
+                    valB = b.titulo_original.toLowerCase();
+                    break;
+                case 'titulo_traduzido':
+                    valA = a.titulo_traduzido.toLowerCase();
+                    valB = b.titulo_traduzido.toLowerCase();
+                    break;
+                default:
+                    valA = a.id;
+                    valB = b.id;
+            }
+
+            if (valA < valB) return ordem === 'crescente' ? -1 : 1;
+            if (valA > valB) return ordem === 'crescente' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    /** Limpa a grade e renderiza a lista de filmes. */
+    /** Limpa a grade e renderiza a lista de filmes. */
+    function renderizarFilmes() {
+        gradeFilmes.innerHTML = ''; // Limpa a grade
+
+        // --- DECLARAÇÃO DE VARIÁVEIS DE BUSCA NO TOPO ---
+        const termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
+        const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
+
+        let listaFiltrada = [...filmes]; // Começa com a lista completa (ou ordenada)
+
+        // 1. Aplica os filtros (se houver algum termo ou ano válido)
+        const temFiltroTitulo = termoBuscaTitulo.length > 0;
+        const temFiltroAno = !isNaN(termoBuscaAno);
+
+        if (temFiltroTitulo || temFiltroAno) {
+            listaFiltrada = filmes.filter(filme => {
+
+                // Filtro por Título
+                const matchTitulo = temFiltroTitulo
+                    ? filme.titulo_traduzido.toLowerCase().includes(termoBuscaTitulo)
+                    : true;
+
+                // Filtro por Ano
+                const matchAno = temFiltroAno
+                    ? filme.ano === termoBuscaAno
+                    : true;
+
+                // Retorna true apenas se ambas as condições forem verdadeiras
+                return matchTitulo && matchAno;
+            });
+        }
+
+        // 2. Verifica se a lista filtrada está vazia e exibe mensagem
+        // ... (o restante da função renderizarFilmes permanece igual)
+        if (listaFiltrada.length === 0) {
+            msgSemFilmes.textContent = (temFiltroTitulo || temFiltroAno)
+                ? `Nenhum filme encontrado para os filtros aplicados.`
+                : "Nenhum filme catalogado. Use o botão '+ NOVO' para começar!";
+            msgSemFilmes.classList.remove('hidden');
+            return;
+        } else {
+            msgSemFilmes.classList.add('hidden');
+        }
+
+        // 3. Renderiza a lista filtrada/completa
+        listaFiltrada.forEach(filme => {
+            const card = criarCardFilme(filme);
+            gradeFilmes.appendChild(card);
+        });
+    }
+
+    /** Delega os eventos de clique (Editar/Excluir) na grade. */
+    gradeFilmes.addEventListener('click', function (e) {
+        const target = e.target.closest('.btn-editar, .btn-excluir');
+        if (!target) return;
+
+        const id = parseInt(target.getAttribute('data-id'));
+
+        if (target.classList.contains('btn-editar')) {
+            abrirModalEdicao(id);
+        } else if (target.classList.contains('btn-excluir')) {
+            excluirFilme(id);
+        }
+    });
+
+    /** Remove um filme do Supabase, usando o título na confirmação. */
+    async function excluirFilme(id) {
+
+        // 1. Encontra o objeto do filme no array local
+        const filme = filmes.find(f => f.id === id);
+
+        // Se por algum motivo não encontrar o filme (dados desatualizados), usa o ID como fallback
+        const tituloParaExcluir = filme ? filme.titulo_traduzido : `ID ${id}`;
+
+        // 2. Exibe a confirmação usando o título do filme
+        if (confirm(`Tem certeza que deseja excluir o filme "${tituloParaExcluir}"?`)) {
+            const {error} = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Erro ao excluir:', error);
+                alert(`Erro ao excluir: ${error.message}`);
+            } else {
+                await carregarFilmes();
+            }
+        }
+    }
+
+    // --- FUNÇÕES DE BUSCA (API TMDb) ---
+
+    /** Busca cartazes alternativos pelo ID TMDb do filme. */
+    async function buscarCartazes(tmdbId) {
+        cartazesLista.innerHTML = '';
+        msgSemCartazes.textContent = 'Carregando cartazes...';
+        cartazesAlternativosContainer.classList.remove('hidden');
+
+        const url = `https://api.themoviedb.org/3/movie/${tmdbId}/images?api_key=${TMDB_API_KEY}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Erro ao buscar imagens.');
+
+            const data = await response.json();
+
+            const cartazesBR = data.posters
+                .filter(poster => poster.iso_639_1 === 'pt' || poster.iso_639_1 === 'en' || !poster.iso_639_1)
+                .sort((a, b) => b.vote_count - a.vote_count);
+
+            if (cartazesBR.length > 0) {
+                msgSemCartazes.classList.add('hidden');
+
+                cartazesBR.slice(0, 10).forEach(poster => {
+                    const fullPath = poster.file_path;
+                    const thumbUrl = `${BASE_THUMB_URL}${fullPath}`;
+                    const fullUrl = `${BASE_IMAGE_URL}${fullPath}`;
+
+                    const img = document.createElement('img');
+                    img.src = thumbUrl;
+                    img.alt = 'Cartaz Alternativo';
+                    img.className = 'w-16 h-24 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
+                    img.setAttribute('data-full-url', fullUrl);
+
+                    // Adiciona o evento de clique
+                    img.addEventListener('click', () => {
+                        inputLinkImagem.value = fullUrl;
+                        posterPreview.src = fullUrl;
+                    });
+
+                    cartazesLista.appendChild(img);
+                });
+            } else {
+                msgSemCartazes.textContent = 'Nenhum cartaz alternativo encontrado.';
+                msgSemCartazes.classList.remove('hidden');
+            }
+
+        } catch (error) {
+            console.error('Erro ao buscar cartazes alternativos:', error);
+            msgSemCartazes.textContent = 'Erro ao carregar cartazes.';
+            msgSemCartazes.classList.remove('hidden');
+        }
+    }
+
+    /** Busca detalhes de um filme pelo seu ID TMDb. */
+    async function buscarFilmePorId(tmdbId) {
+        if (!tmdbId) return;
+
+        buscaIDMsg.classList.add('hidden');
+        btnBuscarTMDBID.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btnBuscarTMDBID.disabled = true;
+
+        const url = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Filme não encontrado ou erro na API.');
+
+            const data = await response.json();
+
+            // Preenche os campos
+            inputCodigoTMDB.value = data.id;
+            inputCodigoIMDB.value = data.imdb_id || '';
+            inputTituloOriginal.value = data.original_title;
+            inputTituloTraduzido.value = data.title;
+            inputAno.value = data.release_date ? data.release_date.substring(0, 4) : '';
+
+            if (data.release_date) {
+                inputAno.value = data.release_date.substring(0, 4); // Ano (YYYY)
+                inputDataRelease.value = data.release_date; // Data completa (YYYY-MM-DD)
+            } else {
+                inputAno.value = '';
+                inputDataRelease.value = '';
+            }
+
+            inputSinopse.value = data.overview;
+
+            const posterPath = data.poster_path;
+            const fullImageUrl = posterPath ? `${BASE_IMAGE_URL}${posterPath}` : '';
+            inputLinkImagem.value = fullImageUrl;
+            posterPreview.src = fullImageUrl || 'https://via.placeholder.com/500x750?text=Sem+Cartaz';
+
+            buscarCartazes(tmdbId);
+
+        } catch (error) {
+            console.error('Erro na busca por ID TMDb:', error);
+            buscaIDMsg.textContent = 'Erro na busca ou ID TMDb inválido.';
+            buscaIDMsg.classList.remove('hidden');
+        } finally {
+            btnBuscarTMDBID.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            btnBuscarTMDBID.disabled = false;
+        }
+    }
+
+    /** Busca filmes por título. */
+    async function buscarFilmePorTitulo(titulo) {
+        if (!titulo) return;
+
+        btnBuscarTitulo.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btnBuscarTitulo.disabled = true;
+        resultadosBuscaTitulo.innerHTML = '';
+
+        const url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(titulo)}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Erro na API de busca.');
+
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+                data.results.slice(0, 5).forEach(filme => {
+                    const item = document.createElement('div');
+                    item.className = 'p-2 bg-white hover:bg-destaque-card cursor-pointer rounded-md border border-suave text-sm flex justify-between items-center';
+                    item.setAttribute('data-tmdb-id', filme.id);
+                    item.innerHTML = `
+                            <span>${filme.title} (${filme.release_date ? filme.release_date.substring(0, 4) : 'N/A'})</span>
+                            <i class="fas fa-hand-pointer text-principal"></i>
+                        `;
+                    item.addEventListener('click', () => {
+                        buscarFilmePorId(filme.id);
+                        resultadosBuscaTitulo.innerHTML = '';
+                        inputBuscaTitulo.value = '';
+                    });
+                    resultadosBuscaTitulo.appendChild(item);
+                });
+            } else {
+                resultadosBuscaTitulo.innerHTML = '<p class="text-texto-suave italic p-2">Nenhum resultado encontrado para o título.</p>';
+            }
+
+        } catch (error) {
+            console.error('Erro na busca por Título TMDb:', error);
+            resultadosBuscaTitulo.innerHTML = '<p class="text-danger italic p-2">Erro ao buscar no TMDb. Verifique sua chave de API.</p>';
+        } finally {
+            btnBuscarTitulo.innerHTML = '<i class="fas fa-search"></i>';
+            btnBuscarTitulo.disabled = false;
+        }
+    }
+
+    // --- LISTENERS DE EVENTOS ---
+
+    btnNovoFilme.addEventListener('click', abrirModalNovo);
+    btnCancelar.addEventListener('click', fecharModal);
+    btnFecharModal.addEventListener('click', fecharModal);
+
+    // NOVO: Listener para aplicar o filtro em tempo real
+    inputFiltroTitulo.addEventListener('input', renderizarFilmes);
+
+    inputFiltroAno.addEventListener('input', renderizarFilmes);
+
+    // O listener de Ordenação agora apenas chama carregarFilmes, que por sua vez chama renderizarFilmes
+    btnAplicarOrdenacao.addEventListener('click', carregarFilmes);
+
+    inputLinkImagem.addEventListener('input', (e) => {
+        posterPreview.src = e.target.value || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    });
+
+    // O botão de ordenação chama a função de carregar filmes (que busca e ordena)
+    btnAplicarOrdenacao.addEventListener('click', carregarFilmes);
+
+    btnBuscarTMDBID.addEventListener('click', () => {
+        const tmdbId = parseInt(inputTMDBBusca.value.trim());
+        if (tmdbId) {
+            buscarFilmePorId(tmdbId);
+        }
+    });
+
+    btnBuscarTitulo.addEventListener('click', () => {
+        const titulo = inputBuscaTitulo.value.trim();
+        if (titulo) {
+            buscarFilmePorTitulo(titulo);
+        }
+    });
+
+    /** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
+    function getIntOrNull(inputValue) {
+        const value = inputValue.trim();
+        if (!value) return null; // Retorna null se estiver vazio
+        const num = parseInt(value);
+        return isNaN(num) ? null : num; // Retorna o número ou null se for inválido
+    }
+
+    radioBuscaTMDBId.addEventListener('change', () => alternarBusca('id'));
+    radioBuscaTitulo.addEventListener('change', () => alternarBusca('titulo'));
+
+    // --- INICIALIZAÇÃO ---
+    carregarFilmes();
+    alternarBusca('titulo');
+</script>
+</body>
+</html>
