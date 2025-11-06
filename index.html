@@ -112,16 +112,14 @@
 
         <div class="flex flex-wrap gap-4 items-center border-t pt-3 border-suave">
             <span class="text-sm font-semibold text-gray-700">Ordenação:</span>
-            <select id="sort-criterio"
-                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+            <select id="sort-criterio" class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
                 <option value="id">ID</option>
                 <option value="data_release" selected>Ano</option>
                 <option value="titulo_original">Título Original</option>
                 <option value="titulo_traduzido">Título Traduzido</option>
             </select>
 
-            <select id="sort-ordem"
-                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+            <select id="sort-ordem" class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
                 <option value="crescente">Crescente</option>
                 <option value="decrescente">Decrescente</option>
             </select>
@@ -549,8 +547,6 @@
             sinopse: inputSinopse.value.trim() || null,
             cores: tipoCorSelecionado ? tipoCorSelecionado.value : 'Cores',
         };
-
-        let error = null;
 
         if (editandoId) {
             // MODO EDIÇÃO
