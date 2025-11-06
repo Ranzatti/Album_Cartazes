@@ -134,7 +134,7 @@
 
                 <div class="sm:w-36">
                     <label for="filtro-ano" class="block text-sm font-medium text-gray-700 mb-1">Buscar por Ano:</label>
-                    <input type="number" id="filtro-ano" placeholder="Ex: 1999"
+                    <input type="text" id="filtro-ano" placeholder="Ex: 1999"
                            class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
                 </div>
 
@@ -375,7 +375,8 @@
             </div>
 
             <div>
-                <label for="link-imagem" class="block text-sm font-medium text-gray-700">Link da Imagem do Cartaz</label>
+                <label for="link-imagem" class="block text-sm font-medium text-gray-700">Link da Imagem do
+                    Cartaz</label>
                 <input type="url" id="link-imagem"
                        class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
             </div>
@@ -523,15 +524,16 @@
         // Inicia a query base
         let query = supabaseClient.from(SUPABASE_TABLE).select('*', {count: 'exact'});
 
-        // APLICA FILTROS NA CONSULTA SUPABASE (Cor e Ano)
         if (filtroCor && filtroCor.length > 0) {
             query = query.eq('cores', filtroCor);
         }
         if (!isNaN(termoBuscaAno)) {
             query = query.eq('ano', termoBuscaAno);
         }
+
         if (termoBuscaTitulo.length > 0) {
-            query = query.ilike('titulo_traduzido', `%${termoBuscaTitulo}%`);
+            const orFilter = `titulo_traduzido.ilike.%${termoBuscaTitulo}%,titulo_original.ilike.%${termoBuscaTitulo}%`;
+            query = query.or(orFilter);
         }
 
         try {
@@ -1113,17 +1115,13 @@
 
     btnFecharModal.addEventListener('click', fecharModal);
 
-    // inputFiltroTitulo.addEventListener('input', renderizarFilmes);
-    inputFiltroTitulo.addEventListener('input', () => carregarFilmes(true));
-    // inputFiltroAno.addEventListener('input', renderizarFilmes);
+    // inputFiltroTitulo.addEventListener('input', () => carregarFilmes(true));
+    // inputFiltroTitulo.addEventListener('input', () => {});
 
-
-    inputFiltroAno.addEventListener('input', () => carregarFilmes(true));
+    // inputFiltroAno.addEventListener('input', () => carregarFilmes(true));
     selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 
     btnAplicarOrdenacao.addEventListener('click', () => carregarFilmes(true));
-
-    // selectFiltroCores.addEventListener('change', renderizarFilmes);
 
     inputLinkImagem.addEventListener('input', (e) => {
         posterPreview.src = e.target.value || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
@@ -1150,6 +1148,27 @@
 
     inputCodigoTMDB.addEventListener('input', atualizarLinkTMDB);
     inputCodigoIMDB.addEventListener('input', atualizarLinkIMDB);
+
+    document.addEventListener('keydown', function (e) {
+        // Verifica se a tecla pressionada é 'Escape' (ou keyCode 27)
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            // Verifica se o modal está visível (se não tem a classe 'hidden')
+            if (!modal.classList.contains('hidden')) {
+                fecharModal(); // Chama a função que fecha o modal
+            }
+        }
+    });
+
+    function checarEnterBusca(e) {
+        // Verifica se a tecla pressionada é 'Enter' (ou keyCode 13)
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault(); // Impede o envio de formulário
+            carregarFilmes(true); // Executa a busca (reseta a página)
+        }
+    }
+
+    inputFiltroTitulo.addEventListener('keydown', checarEnterBusca);
+    inputFiltroAno.addEventListener('keydown', checarEnterBusca);
 
     /** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
     function getIntOrNull(inputValue) {
