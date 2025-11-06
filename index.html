@@ -57,6 +57,12 @@
 
 <body class="bg-fundo-claro min-h-screen p-4 sm:p-8">
 
+<div id="loading-spinner"
+     class="fixed inset-0 bg-fundo-claro bg-opacity-75 z-[60] hidden flex-col items-center justify-center">
+    <i class="fas fa-spinner fa-spin text-principal text-5xl mb-4"></i>
+    <p class="text-xl text-gray-700 font-semibold">Carregando catálogo...</p>
+</div>
+
 <div class="max-w-7xl mx-auto">
     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
@@ -91,6 +97,15 @@
                     <label for="filtro-ano" class="block text-sm font-medium text-gray-700 mb-1">Buscar por Ano:</label>
                     <input type="number" id="filtro-ano" placeholder="Ex: 1999"
                            class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                </div>
+
+                <div class="sm:w-36">
+                    <label for="filtro-cores" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Cor:</label>
+                    <select id="filtro-cores"
+                            class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-gray-700">
+                        <option value="">Todos</option>
+                        <option value="Cores">Cores</option>
+                        <option value="Preto Branco">Preto & Branco</option> </select>
                 </div>
             </div>
         </div>
@@ -240,7 +255,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Cor</label>
                         <div class="flex items-center space-x-4 mt-1">
                             <label class="flex items-center cursor-pointer">
-                                <input type="radio" name="tipoCor" id="radio-pb" value="Preto-Branco"
+                                <input type="radio" name="tipoCor" id="radio-pb" value="Preto Branco"
                                        class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
                                 <span class="ml-2 text-sm text-gray-700">P/B</span>
                             </label>
@@ -375,39 +390,62 @@
     const inputFiltroTitulo = document.getElementById('filtro-titulo');
     const inputFiltroAno = document.getElementById('filtro-ano');
 
+    const selectFiltroCores = document.getElementById('filtro-cores');
+
     const radioBuscaTMDBId = document.getElementById('radio-busca-tmdb-id');
     const radioBuscaTitulo = document.getElementById('radio-busca-titulo');
     const buscaIdContainer = document.getElementById('busca-id-container');
     const buscaTituloContainer = document.getElementById('busca-titulo-container');
 
+    const loadingSpinner = document.getElementById('loading-spinner');
+
 
     // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
 
-    /** Carrega os filmes do Supabase, ordenando pelo critério selecionado (agora inclui 'data'). */
+    /** Carrega os filmes do Supabase, ordenando pelo critério selecionado. */
     async function carregarFilmes() {
-        // Obtém o critério (que agora será 'data', 'id', 'titulo_original' ou 'titulo_traduzido')
+        // MOSTRA O SPINNER para cobrir a REQUISIÇÃO DE REDE
+        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.classList.add('flex');
+
         const criterio = sortCriterio.value;
         const isAscending = sortOrdem.value === 'crescente';
 
-        // O Supabase ordena por um único critério (o valor do select)
-        const {data, error} = await supabaseClient
-            .from(SUPABASE_TABLE)
-            .select('*')
-            .order(criterio, {ascending: isAscending});
+        try {
+            // EXECUTA A BUSCA PESADA NO SUPABASE
+            const {data, error} = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .select('*')
+                .range(0, 4999)
+                .order(criterio, {ascending: isAscending});
 
-        if (error) {
-            console.error('Erro ao carregar filmes:', error);
-            alert('Erro ao carregar filmes do banco de dados. Verifique a chave e RLS.');
-            return;
+            if (error) {
+                console.error('Erro ao carregar filmes:', error);
+                alert('Erro ao carregar filmes do banco de dados. Verifique a chave e RLS.');
+                filmes = [];
+                // ESCONDE O SPINNER EM CASO DE ERRO
+                loadingSpinner.classList.add('hidden');
+                loadingSpinner.classList.remove('flex');
+                return;
+            }
+
+            filmes = data || [];
+
+            // 1. ATUALIZA CONTADOR (Total de registros brutos)
+            contadorRegistros.textContent = `${filmes.length.toString().padStart(2, '0')} Registros`;
+
+            // 2. CHAMA A RENDERIZAÇÃO LENTA
+            renderizarFilmes();
+
+            // REMOVIDO: NENHUM FINALLY/ESCONDER SPINNER AQUI!
+            // renderizarFilmes é quem tem a responsabilidade final de esconder
+
+        } catch (e) {
+            console.error('Erro geral no carregamento:', e);
+            alert('Um erro inesperado ocorreu durante o carregamento.');
+            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.remove('flex');
         }
-
-        filmes = data || [];
-
-        // 1. ATUALIZA CONTADOR
-        contadorRegistros.textContent = `${filmes.length.toString().padStart(2, '0')} Registros`;
-
-        // 2. Renderiza (e aplica o filtro de texto local)
-        renderizarFilmes();
     }
 
     // --- FUNÇÕES DO MODAL/FORMULÁRIO ---
@@ -644,55 +682,63 @@
     }
 
     /** Limpa a grade e renderiza a lista de filmes. */
-    /** Limpa a grade e renderiza a lista de filmes. */
     function renderizarFilmes() {
-        gradeFilmes.innerHTML = ''; // Limpa a grade
 
-        // --- DECLARAÇÃO DE VARIÁVEIS DE BUSCA NO TOPO ---
-        const termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
-        const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
+        // NOVO: MOSTRA SPINNER PARA COBRIR O CONGELAMENTO DA TELA
+        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.classList.add('flex');
 
-        let listaFiltrada = [...filmes]; // Começa com a lista completa (ou ordenada)
+        // Usamos setTimeout para que o navegador exiba o spinner antes de travar no JS.
+        setTimeout(() => {
+            gradeFilmes.innerHTML = ''; // Limpa a grade
 
-        // 1. Aplica os filtros (se houver algum termo ou ano válido)
-        const temFiltroTitulo = termoBuscaTitulo.length > 0;
-        const temFiltroAno = !isNaN(termoBuscaAno);
+            const termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
+            const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
+            const filtroCor = selectFiltroCores.value;
 
-        if (temFiltroTitulo || temFiltroAno) {
-            listaFiltrada = filmes.filter(filme => {
+            let listaFiltrada = [...filmes];
 
-                // Filtro por Título
-                const matchTitulo = temFiltroTitulo
-                    ? filme.titulo_traduzido.toLowerCase().includes(termoBuscaTitulo)
-                    : true;
+            // 1. Aplica os filtros (Lógica de filtro mantida)
+            const temFiltroTitulo = termoBuscaTitulo.length > 0;
+            const temFiltroAno = !isNaN(termoBuscaAno);
+            const temFiltroCor = filtroCor.length > 0;
 
-                // Filtro por Ano
-                const matchAno = temFiltroAno
-                    ? filme.ano === termoBuscaAno
-                    : true;
+            if (temFiltroTitulo || temFiltroAno || temFiltroCor) {
+                listaFiltrada = filmes.filter(filme => {
+                    const matchTitulo = temFiltroTitulo ? filme.titulo_traduzido.toLowerCase().includes(termoBuscaTitulo) : true;
+                    const matchAno = temFiltroAno ? filme.ano === termoBuscaAno : true;
+                    const matchCor = temFiltroCor ? filme.cores === filtroCor : true;
+                    return matchTitulo && matchAno && matchCor;
+                });
+            }
 
-                // Retorna true apenas se ambas as condições forem verdadeiras
-                return matchTitulo && matchAno;
-            });
-        }
+            // 2. Verifica se a lista filtrada está vazia e exibe mensagem
+            const totalFilmes = listaFiltrada.length;
 
-        // 2. Verifica se a lista filtrada está vazia e exibe mensagem
-        // ... (o restante da função renderizarFilmes permanece igual)
-        if (listaFiltrada.length === 0) {
-            msgSemFilmes.textContent = (temFiltroTitulo || temFiltroAno)
-                ? `Nenhum filme encontrado para os filtros aplicados.`
-                : "Nenhum filme catalogado. Use o botão '+ NOVO' para começar!";
-            msgSemFilmes.classList.remove('hidden');
-            return;
-        } else {
-            msgSemFilmes.classList.add('hidden');
-        }
+            if (totalFilmes === 0) {
+                msgSemFilmes.textContent = (temFiltroTitulo || temFiltroAno || temFiltroCor)
+                    ? `Nenhum filme encontrado para os filtros aplicados.`
+                    : "Nenhum filme catalogado. Use o botão '+ NOVO' para começar!";
+                msgSemFilmes.classList.remove('hidden');
 
-        // 3. Renderiza a lista filtrada/completa
-        listaFiltrada.forEach(filme => {
-            const card = criarCardFilme(filme);
-            gradeFilmes.appendChild(card);
-        });
+            } else {
+                msgSemFilmes.classList.add('hidden');
+
+                // 3. Renderiza a lista filtrada/completa
+                listaFiltrada.forEach(filme => {
+                    const card = criarCardFilme(filme);
+                    gradeFilmes.appendChild(card);
+                });
+            }
+
+            // 4. ATUALIZA CONTADOR
+            contadorRegistros.textContent = `${totalFilmes.toString().padStart(2, '0')} Registros`;
+
+            // ESCONDE O SPINNER APÓS A RENDERIZAÇÃO COMPLETA
+            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.remove('flex');
+
+        }, 50); // 50ms para que o spinner tenha tempo de aparecer
     }
 
     /** Delega os eventos de clique (Editar/Excluir) na grade. */
@@ -889,19 +935,18 @@
     btnCancelar.addEventListener('click', fecharModal);
     btnFecharModal.addEventListener('click', fecharModal);
 
-    // NOVO: Listener para aplicar o filtro em tempo real
     inputFiltroTitulo.addEventListener('input', renderizarFilmes);
 
     inputFiltroAno.addEventListener('input', renderizarFilmes);
 
-    // O listener de Ordenação agora apenas chama carregarFilmes, que por sua vez chama renderizarFilmes
+    selectFiltroCores.addEventListener('change', renderizarFilmes);
+
     btnAplicarOrdenacao.addEventListener('click', carregarFilmes);
 
     inputLinkImagem.addEventListener('input', (e) => {
         posterPreview.src = e.target.value || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
     });
 
-    // O botão de ordenação chama a função de carregar filmes (que busca e ordena)
     btnAplicarOrdenacao.addEventListener('click', carregarFilmes);
 
     btnBuscarTMDBID.addEventListener('click', () => {
