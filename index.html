@@ -181,11 +181,6 @@
                 <option value="crescente">Crescente</option>
                 <option value="decrescente">Decrescente</option>
             </select>
-
-            <button id="btn-aplicar-ordenacao"
-                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg text-sm transition duration-300">
-                <i class="fas fa-check mr-1"></i> Aplicar
-            </button>
         </div>
     </div>
 
@@ -433,7 +428,7 @@
         </div>
 
         <div class="p-6">
-            <canvas id="grafico-filmes" class="min-h-96 w-full"></canvas>
+            <canvas id="grafico-filmes" class="w-full"></canvas>
 
             <div class="mt-4 text-center text-sm text-texto-suave">
                 Dados baseados em todos os <span id="grafico-total-registros">0</span> filmes carregados.
@@ -504,7 +499,7 @@
 
     const sortCriterio = document.getElementById('sort-criterio');
     const sortOrdem = document.getElementById('sort-ordem');
-    const btnAplicarOrdenacao = document.getElementById('btn-aplicar-ordenacao');
+    // const btnAplicarOrdenacao = document.getElementById('btn-aplicar-ordenacao');
 
     const inputBuscaTitulo = document.getElementById('busca-titulo');
     const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
@@ -645,6 +640,7 @@
     /** Constrói e atualiza o link TMDb no modal. */
     function atualizarLinkTMDB() {
         const tmdbId = inputCodigoTMDB.value.trim();
+
         if (tmdbId) {
             linkTMDBModal.href = `https://www.themoviedb.org/movie/${tmdbId}`;
             linkTMDBModal.classList.remove('opacity-50', 'pointer-events-none');
@@ -682,7 +678,7 @@
     /** Mapeia dados do Supabase para os campos do formulário (Filme -> Formulário) */
     function preencherFormulario(filme) {
         editandoId = filme.id;
-
+        inputTMDBBusca.value = '';
         modalTitulo.textContent = `Editar Filme (ID: ${filme.id})`;
 
         // Mapeamento das colunas da tabela 'album' para os campos do formulário
@@ -695,10 +691,10 @@
         // Tipo de Cor (coluna 'cores')
         if (filme.cores === 'Preto Branco') {
             radioPB.checked = true;
-            radioCores.checked = false; // Garante que 'Cores' seja desmarcado
+            radioCores.checked = false;
         } else {
             radioCores.checked = true;
-            radioPB.checked = false; // Garante que 'P/B' seja desmarcado
+            radioPB.checked = false;
         }
 
         inputPagina.value = filme.pagina || '';
@@ -1105,6 +1101,9 @@
         } finally {
             btnBuscarTMDBID.innerHTML = '<i class="fas fa-sync-alt"></i>';
             btnBuscarTMDBID.disabled = false;
+
+            atualizarLinkTMDB();
+            atualizarLinkIMDB();
         }
     }
 
@@ -1157,7 +1156,7 @@
     /************* FUNCOES DE GRAFICO *****************/
     /***************************************************/
 
-    let meuGrafico = null; // Variável para armazenar a instância do gráfico
+    let meuGrafico = null;
 
     /** Processa o array de filmes para contar a frequência de cada ano. */
     function processarDadosGrafico(filmesArray) {
@@ -1166,7 +1165,8 @@
         filmesArray.forEach(filme => {
             const ano = parseInt(filme.ano);
 
-            if (!isNaN(ano) && ano > 1800) {
+            // CRÍTICO: Checa se o ano é um NÚMERO, se é maior que 1800 (para excluir 0, NaN) E MENOR que 9999
+            if (!isNaN(ano) && ano > 1800 && ano <= 9999) {
                 contagemAnos[ano] = (contagemAnos[ano] || 0) + 1;
             }
         });
@@ -1183,9 +1183,8 @@
         };
     }
 
-    // Linha 1192:
     /** Desenha o gráfico de barras. */
-    function desenharGrafico(dadosProcessados) { // <-- RECEBE OS DADOS AQUI
+    function desenharGrafico(dadosProcessados) {
 
         const canvasElement = document.getElementById('grafico-filmes');
         if (!canvasElement) return;
@@ -1196,15 +1195,24 @@
             meuGrafico = null;
         }
 
-        // Limpeza explícita do Canvas (Necessário para evitar sobras de desenho)
+        // Limpeza explícita do Canvas
         const ctx = canvasElement.getContext('2d');
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // NOVO CÁLCULO CRÍTICO DE ALTURA
+        const NUM_ANOS = dadosProcessados.labels.length;
+        const ALTURA_POR_BARRA = 20; // 20px por barra (um valor seguro)
+        const ALTURA_NECESSARIA = Math.max(400, NUM_ANOS * ALTURA_POR_BARRA); // Mínimo de 400px
+
+        // Aplica a altura calculada ao Canvas via estilo
+        canvasElement.style.height = `${ALTURA_NECESSARIA}px`;
+
 
         // 2. Cria a nova instância (Configuração de Barras HORIZONTAL)
         meuGrafico = new Chart(canvasElement, {
             type: 'bar',
             data: {
-                labels: dadosProcessados.labels, // <-- AGORA DEFINIDO
+                labels: dadosProcessados.labels,
                 datasets: [{
                     label: 'Número de Filmes',
                     data: dadosProcessados.dados,
@@ -1213,11 +1221,41 @@
                     borderWidth: 1
                 }]
             },
-            // ... (restante das opções)
+            options: {
+                responsive: false, // Mantido para evitar loop
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Gráfico Horizontal
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: { // Eixo X é a QUANTIDADE (horizontal)
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Filmes'
+                        },
+                        ticks: {
+                            precision: 0,
+                            stepSize: 100
+                        }
+                    },
+                    y: { // Eixo Y é o ANO (vertical)
+                        title: {
+                            display: true,
+                            text: 'Ano de Lançamento'
+                        },
+                        ticks: {
+                            autoSkip: false // CRÍTICO: Exibe todos os anos
+                        }
+                    }
+                }
+            }
         });
     }
 
-    // Linha 1207:
     /** Abre e desenha o gráfico, forçando o carregamento de TODOS os anos do banco. */
     async function abrirModalGrafico() {
         loadingSpinner.classList.remove('hidden');
@@ -1226,22 +1264,22 @@
         // 1. EXECUTA UMA NOVA BUSCA COMPLETA APENAS PARA O GRÁFICO
         const {data, error} = await supabaseClient
             .from(SUPABASE_TABLE)
-            .select('ano') // Busca APENAS a coluna 'ano' para economizar banda
-            .range(0, 4999); // Limite de 5000
+            .select('ano') // Busca APENAS a coluna 'ano'
+            .range(0, 4999); // Limite alto para pegar todos os registros
 
         loadingSpinner.classList.add('hidden');
         loadingSpinner.classList.remove('flex');
 
         if (error) {
             console.error('Erro ao buscar dados para o gráfico:', error);
-            alert('Erro ao carregar todos os dados para o gráfico. Verifique o limite do Supabase.');
+            alert('Erro ao carregar todos os dados para o gráfico.');
             return;
         }
 
         const todosOsAnos = data || [];
 
-        // 2. PROCESSA OS DADOS ANTES DE DESENHAR
-        const dadosProcessados = processarDadosGrafico(todosOsAnos); // <-- PROCESSA AQUI
+        // 2. PROCESSA OS DADOS COMPLETOS
+        const dadosProcessados = processarDadosGrafico(todosOsAnos);
 
         // 3. Exibe o modal
         modalGrafico.classList.remove('hidden');
@@ -1249,9 +1287,8 @@
 
         graficoTotalRegistros.textContent = totalRegistros;
 
-        // 4. Desenha o gráfico
+        // 4. Desenha o gráfico (Com os dados COMPLETO e processados)
         setTimeout(() => {
-            // CORREÇÃO: Passa os dados processados para a função de desenho
             desenharGrafico(dadosProcessados);
         }, 100);
     }
@@ -1268,12 +1305,13 @@
 
     btnNovoFilme.addEventListener('click', abrirModalNovo);
     btnCancelar.addEventListener('click', fecharModal);
-
     btnFecharModal.addEventListener('click', fecharModal);
 
     selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
+    sortCriterio.addEventListener('change', () => carregarFilmes(true));
+    sortOrdem.addEventListener('change', () => carregarFilmes(true));
 
-    btnAplicarOrdenacao.addEventListener('click', () => carregarFilmes(true));
+    // btnAplicarOrdenacao.addEventListener('click', () => carregarFilmes(true));
 
     inputLinkImagem.addEventListener('input', (e) => {
         posterPreview.src = e.target.value || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
