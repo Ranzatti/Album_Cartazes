@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo de Cartazes de Filmes</title>
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+    <link rel="icon"
+          href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -114,10 +117,21 @@
                 </span>
         </h1>
 
-        <button id="btn-novo-filme"
-                class="bg-principal hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
-            <i class="fas fa-plus mr-2"></i> NOVO
-        </button>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
+        </h1>
+
+        <div class="flex space-x-3">
+            <button id="btn-modal-grafico"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
+                <i class="fas fa-chart-bar mr-2"></i> GRÁFICO
+            </button>
+
+            <button id="btn-novo-filme"
+                    class="bg-principal hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
+                <i class="fas fa-plus mr-2"></i> NOVO
+            </button>
+        </div>
+
     </header>
 
     <div class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
@@ -406,6 +420,29 @@
     </div>
 </div>
 
+<div id="modal-grafico" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl transform transition-all duration-300 overflow-y-auto max-h-[90vh]">
+
+        <div class="p-4 border-b border-suave flex justify-between items-center bg-fundo-claro rounded-t-xl">
+            <h2 class="text-xl font-bold text-principal flex items-center">
+                <i class="fas fa-chart-line mr-2"></i> Distribuição de Filmes por Ano
+            </h2>
+            <button id="btn-fechar-grafico" class="text-gray-500 hover:text-danger text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <canvas id="grafico-filmes" class="min-h-96 w-full"></canvas>
+
+            <div class="mt-4 text-center text-sm text-texto-suave">
+                Dados baseados em todos os <span id="grafico-total-registros">0</span> filmes carregados.
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <script>
     // --- CONSTANTES E VARIÁVEIS GLOBAIS ---
 
@@ -495,6 +532,12 @@
 
     const linkTMDBModal = document.getElementById('link-tmdb-modal');
     const linkIMDBModal = document.getElementById('link-imdb-modal');
+
+    const btnModalGrafico = document.getElementById('btn-modal-grafico');
+    const modalGrafico = document.getElementById('modal-grafico');
+    const btnFecharGrafico = document.getElementById('btn-fechar-grafico');
+    const graficoCanvas = document.getElementById('grafico-filmes');
+    const graficoTotalRegistros = document.getElementById('grafico-total-registros');
 
 
     // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
@@ -1110,17 +1153,124 @@
         }
     }
 
-    // --- LISTENERS DE EVENTOS ---
+    /***************************************************/
+    /************* FUNCOES DE GRAFICO *****************/
+    /***************************************************/
+
+    let meuGrafico = null; // Variável para armazenar a instância do gráfico
+
+    /** Processa o array de filmes para contar a frequência de cada ano. */
+    function processarDadosGrafico(filmesArray) {
+        const contagemAnos = {};
+
+        filmesArray.forEach(filme => {
+            const ano = parseInt(filme.ano);
+
+            if (!isNaN(ano) && ano > 1800) {
+                contagemAnos[ano] = (contagemAnos[ano] || 0) + 1;
+            }
+        });
+
+        // Ordena os anos como NÚMEROS
+        const anosOrdenados = Object.keys(contagemAnos)
+            .sort((a, b) => parseInt(a) - parseInt(b));
+
+        const dados = anosOrdenados.map(ano => contagemAnos[ano]);
+
+        return {
+            labels: anosOrdenados,
+            dados: dados,
+        };
+    }
+
+    // Linha 1192:
+    /** Desenha o gráfico de barras. */
+    function desenharGrafico(dadosProcessados) { // <-- RECEBE OS DADOS AQUI
+
+        const canvasElement = document.getElementById('grafico-filmes');
+        if (!canvasElement) return;
+
+        // 1. Destruir e Resetar
+        if (meuGrafico) {
+            meuGrafico.destroy();
+            meuGrafico = null;
+        }
+
+        // Limpeza explícita do Canvas (Necessário para evitar sobras de desenho)
+        const ctx = canvasElement.getContext('2d');
+        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+        // 2. Cria a nova instância (Configuração de Barras HORIZONTAL)
+        meuGrafico = new Chart(canvasElement, {
+            type: 'bar',
+            data: {
+                labels: dadosProcessados.labels, // <-- AGORA DEFINIDO
+                datasets: [{
+                    label: 'Número de Filmes',
+                    data: dadosProcessados.dados,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            // ... (restante das opções)
+        });
+    }
+
+    // Linha 1207:
+    /** Abre e desenha o gráfico, forçando o carregamento de TODOS os anos do banco. */
+    async function abrirModalGrafico() {
+        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.classList.add('flex');
+
+        // 1. EXECUTA UMA NOVA BUSCA COMPLETA APENAS PARA O GRÁFICO
+        const {data, error} = await supabaseClient
+            .from(SUPABASE_TABLE)
+            .select('ano') // Busca APENAS a coluna 'ano' para economizar banda
+            .range(0, 4999); // Limite de 5000
+
+        loadingSpinner.classList.add('hidden');
+        loadingSpinner.classList.remove('flex');
+
+        if (error) {
+            console.error('Erro ao buscar dados para o gráfico:', error);
+            alert('Erro ao carregar todos os dados para o gráfico. Verifique o limite do Supabase.');
+            return;
+        }
+
+        const todosOsAnos = data || [];
+
+        // 2. PROCESSA OS DADOS ANTES DE DESENHAR
+        const dadosProcessados = processarDadosGrafico(todosOsAnos); // <-- PROCESSA AQUI
+
+        // 3. Exibe o modal
+        modalGrafico.classList.remove('hidden');
+        modalGrafico.classList.add('flex');
+
+        graficoTotalRegistros.textContent = totalRegistros;
+
+        // 4. Desenha o gráfico
+        setTimeout(() => {
+            // CORREÇÃO: Passa os dados processados para a função de desenho
+            desenharGrafico(dadosProcessados);
+        }, 100);
+    }
+
+    /** Fecha o modal do gráfico. */
+    function fecharModalGrafico() {
+        modalGrafico.classList.add('hidden');
+        modalGrafico.classList.remove('flex');
+    }
+
+    /***************************************************/
+    /************* LISTENERS DE EVENTOS *****************/
+    /***************************************************/
 
     btnNovoFilme.addEventListener('click', abrirModalNovo);
     btnCancelar.addEventListener('click', fecharModal);
 
     btnFecharModal.addEventListener('click', fecharModal);
 
-    // inputFiltroTitulo.addEventListener('input', () => carregarFilmes(true));
-    // inputFiltroTitulo.addEventListener('input', () => {});
-
-    // inputFiltroAno.addEventListener('input', () => carregarFilmes(true));
     selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 
     btnAplicarOrdenacao.addEventListener('click', () => carregarFilmes(true));
@@ -1182,6 +1332,18 @@
 
     radioBuscaTMDBId.addEventListener('change', () => alternarBusca('id'));
     radioBuscaTitulo.addEventListener('change', () => alternarBusca('titulo'));
+
+    btnModalGrafico.addEventListener('click', abrirModalGrafico);
+    btnFecharGrafico.addEventListener('click', fecharModalGrafico);
+
+    // Opcional: Fechar gráfico com ESC
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+            if (!modalGrafico.classList.contains('hidden')) {
+                fecharModalGrafico();
+            }
+        }
+    });
 
     // --- INICIALIZAÇÃO ---
     carregarFilmes(true);
