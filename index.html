@@ -126,6 +126,11 @@
                 <i class="fas fa-chart-bar mr-2"></i> GRÁFICO
             </button>
 
+            <button id="btn-login"
+                    class="bg-texto-suave text-white px-4 py-2 rounded-lg shadow-md hover:bg-principal transition duration-150 flex items-center">
+                <i class="fas fa-sign-in-alt mr-2"></i> Login
+            </button>
+
             <button id="btn-novo-filme"
                     class="bg-principal hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 flex items-center">
                 <i class="fas fa-plus mr-2"></i> NOVO
@@ -145,7 +150,8 @@
             <i id="icone-toggle-busca" class="fas fa-chevron-down text-principal transition-transform duration-300"></i>
         </h2>
 
-        <div id="conteudo-busca-colapsavel" class="overflow-hidden transition-all duration-300 ease-in-out max-h-0 border-t">
+        <div id="conteudo-busca-colapsavel"
+             class="overflow-hidden transition-all duration-300 ease-in-out max-h-0 border-t">
 
             <hr class="mb-4 border-suave">
 
@@ -446,16 +452,49 @@
     </div>
 </div>
 
+<div id="modal-login"
+     class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden justify-center items-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-2xl w-full max-w-sm">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">Acesso Administrativo</h3>
+            <button id="btn-fechar-login" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <form id="form-login">
+            <div class="mb-4">
+                <label for="input-login-nome" class="block text-sm font-medium text-gray-700 mb-1">Usuário
+                    (Email)</label>
+                <input type="text" id="input-login-nome" required
+                       class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+            </div>
+
+            <div class="mb-6">
+                <label for="input-login-senha" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                <input type="password" id="input-login-senha" required
+                       class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+            </div>
+
+            <p id="mensagem-login" class="text-danger text-sm mb-4 hidden">Email ou senha incorretos.</p>
+
+            <button type="submit" id="btn-submit-login"
+                    class="w-full bg-principal text-white py-2 rounded-lg hover:bg-blue-600 transition duration-150">
+                Entrar
+            </button>
+        </form>
+    </div>
+</div>
+
 <script>
     // --- CONSTANTES E VARIÁVEIS GLOBAIS ---
 
-    // ** 1. CREDENCIAIS SUPABASE (Substitua por suas chaves reais!) **
+    // ** 1. CREDENCIAIS SUPABASE **
     const SUPABASE_URL = 'https://kngdhvmwmbcnrcutuuqm.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtuZ2Rodm13bWJjbnJjdXR1dXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc1NTAzODksImV4cCI6MjA1MzEyNjM4OX0.iSycpy-YlpkiBpw4PC-0n4AIN0gxGs6OparYc5C0d20';
     const SUPABASE_TABLE = 'album';
 
-    // ** 2. INICIALIZAÇÃO SUPABASE (CORRIGIDO: Usando a função createClient global) **
-    // Este é o passo que estava causando o erro de inicialização
+    // ** 2. INICIALIZAÇÃO SUPABASE **
     const {createClient} = supabase; // Desestrutura a função para uso direto
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -464,15 +503,14 @@
     const BASE_IMAGE_URL = 'https://image.tmdb.org/t/p/w500';
     const BASE_THUMB_URL = 'https://image.tmdb.org/t/p/w92';
 
-    const BASE6THUMB_URL = 'https://image.tmdb.org/t/p/w92';
-    const PLACEHOLDER_URL = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='750' viewBox='0 0 500 750'%3E%3Crect width='500' height='750' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='30' fill='%236b7280'%3E%20SEM%20CARTAZ%20%3C/text%3E%3C/svg%3E";
+    const FILMES_POR_PAGINA = 100;
 
     let filmes = [];
     let editandoId = null;
-
-    const FILMES_POR_PAGINA = 250;
     let paginaAtual = 1;
     let totalRegistros = 0;
+    let isLoggedIn = false;
+    let sessionToken = null;
 
     // --- REFERÊNCIAS DE ELEMENTOS DOM (Mantidas as mesmas) ---
     const modal = document.getElementById('modal-filme');
@@ -507,7 +545,6 @@
 
     const sortCriterio = document.getElementById('sort-criterio');
     const sortOrdem = document.getElementById('sort-ordem');
-    // const btnAplicarOrdenacao = document.getElementById('btn-aplicar-ordenacao');
 
     const inputBuscaTitulo = document.getElementById('busca-titulo');
     const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
@@ -539,8 +576,15 @@
     const btnModalGrafico = document.getElementById('btn-modal-grafico');
     const modalGrafico = document.getElementById('modal-grafico');
     const btnFecharGrafico = document.getElementById('btn-fechar-grafico');
-    const graficoCanvas = document.getElementById('grafico-filmes');
     const graficoTotalRegistros = document.getElementById('grafico-total-registros');
+
+    const btnLogin = document.getElementById('btn-login');
+    const modalLogin = document.getElementById('modal-login');
+    const btnFecharLogin = document.getElementById('btn-fechar-login');
+    const formLogin = document.getElementById('form-login');
+    const inputLoginNome = document.getElementById('input-login-nome');
+    const inputLoginSenha = document.getElementById('input-login-senha');
+    const mensagemLogin = document.getElementById('mensagem-login');
 
     const btnToggleBusca = document.getElementById('btn-toggle-busca');
     const conteudoBuscaColapsavel = document.getElementById('conteudo-busca-colapsavel');
@@ -548,10 +592,6 @@
 
 
     // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
-
-
-    // CARREGAR FILMES
-    /** Busca o TOTAL de registros no banco e carrega os filmes da página atual, aplicando filtros. */
     async function carregarFilmes(resetPagina = false) {
         loadingSpinner.classList.remove('hidden');
         loadingSpinner.classList.add('flex');
@@ -559,17 +599,14 @@
         const criterio = sortCriterio.value;
         const isAscending = sortOrdem.value === 'crescente';
 
-        // NOVO: Aplica o reset da página (se for chamado por um filtro)
         if (resetPagina) {
             paginaAtual = 1;
         }
 
-        // Obtém os valores dos filtros
         const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
         const filtroCor = selectFiltroCores.value;
         const termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
 
-        // 1. CALCULA O RANGE
         const inicio = (paginaAtual - 1) * FILMES_POR_PAGINA;
         const fim = inicio + FILMES_POR_PAGINA - 1;
 
@@ -589,7 +626,6 @@
         }
 
         try {
-            // EXECUTA BUSCA DE CONTAGEM E DADOS (com filtros aplicados)
             const {data, count, error} = await query
                 .range(inicio, fim)
                 .order(criterio, {ascending: isAscending});
@@ -599,7 +635,6 @@
             totalRegistros = count || 0;
             filmes = data || [];
 
-            // 2. CHAMA A RENDERIZAÇÃO
             renderizarFilmes();
 
         } catch (e) {
@@ -807,8 +842,6 @@
         }
     });
 
-    // Adicione esta nova função
-    /** Alterna a visibilidade da seção de filtros principal. */
     function alternarBuscaPrincipal() {
         const isCollapsed = conteudoBuscaColapsavel.classList.contains('max-h-0');
 
@@ -828,123 +861,85 @@
     }
 
     // --- FUNÇÕES DE RENDERIZAÇÃO E ORDENAÇÃO ---
-
-    /** Cria o HTML de um card de filme e retorna um Node. */
     function criarCardFilme(filme) {
-        // Cria um elemento DIV que será o card (Node)
         const card = document.createElement('div');
-        // Adiciona o grupo de hover no card
         card.className = 'group bg-white rounded-lg shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-suave';
         card.setAttribute('data-id', filme.id);
 
         const imageUrl = filme.link_imagem || '';
         const placeholderText = 'SEM CARTAZ';
 
-        // Usa innerHTML para preencher o conteúdo
+        // Botões de Ação (EDITAR e EXCLUIR) - SÓ APARECEM SE LOGADO
+        const botoesAcaoHtml = isLoggedIn ? `
+            <div class="absolute inset-0 flex flex-col justify-end p-2 bg-black bg-opacity-40
+                        transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                <div class="flex space-x-2">
+                    <button class="flex-1 py-2 px-1 bg-edit/90 hover:bg-edit text-white font-semibold rounded-lg transition duration-300 btn-editar" data-id="${filme.id}">
+                        <i class="fas fa-edit mr-1"></i> Editar
+                    </button>
+                    <button class="flex-1 py-2 px-1 bg-danger/90 hover:bg-danger text-white font-semibold rounded-lg transition duration-300 btn-excluir" data-id="${filme.id}">
+                        <i class="fas fa-trash-alt mr-1"></i> Excluir
+                    </button>
+                </div>
+            </div>
+        ` : '';
+
         card.innerHTML = `
-                <div class="poster-area">
-                    ${imageUrl ?
+        <div class="poster-area">
+            ${imageUrl ?
             // SE TEM IMAGEM: Renderiza a TAG IMG normal
             `<img src="${imageUrl}"
-                              alt="${filme.titulo_traduzido} Cartaz"
-                              class="card-poster">`
+                      alt="${filme.titulo_traduzido} Cartaz"
+                      class="card-poster">`
             :
-            // SE NÃO TEM IMAGEM: Renderiza o DIV Placeholder com o texto "SEM CARTAZ"
+            // SE NÃO TEM IMAGEM: Renderiza o DIV Placeholder
             `<div class="card-poster flex items-center justify-center text-xl font-bold text-texto-suave bg-[#f3f4f6] p-2">
-                             ${placeholderText}
-                         </div>`
+                     ${placeholderText}
+                 </div>`
         }
 
-                    <div class="absolute inset-0 flex flex-col justify-end p-2 bg-black bg-opacity-40
-                                transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+            ${botoesAcaoHtml}
+        </div>
 
-                        <div class="flex space-x-2">
-                            <button class="flex-1 py-2 px-1 bg-edit/90 hover:bg-edit text-white font-semibold rounded-lg transition duration-300 btn-editar" data-id="${filme.id}">
-                                <i class="fas fa-edit mr-1"></i> Editar
-                            </button>
-                            <button class="flex-1 py-2 px-1 bg-danger/90 hover:bg-danger text-white font-semibold rounded-lg transition duration-300 btn-excluir" data-id="${filme.id}">
-                                <i class="fas fa-trash-alt mr-1"></i> Excluir
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <div class="p-3 text-center">
+            <h3 class="text-sm font-bold text-gray-800 truncate input-uppercase" title="${filme.titulo_traduzido}">${filme.titulo_traduzido}</h3>
 
-                <div class="p-3 text-center">
-                    <h3 class="text-sm font-bold text-gray-800 truncate" title="${filme.titulo_traduzido}">${filme.titulo_traduzido}</h3>
+            ${filme.titulo_original ? `<p class="text-xs text-texto-suave truncate italic mt-[-2px] mb-1 input-uppercase" title="Título Original">${filme.titulo_original}</p>` : ''}
 
-                    ${filme.titulo_original ? `<p class="text-xs text-texto-suave truncate italic mt-[-2px] mb-1" title="Título Original">${filme.titulo_original}</p>` : ''}
+            <p class="text-xs text-texto-suave flex justify-center items-center space-x-2">
+                ${filme.imdb ? `
+                    <a href="https://www.imdb.com/title/${filme.imdb}" target="_blank" class="text-principal hover:underline font-semibold flex items-center" title="Ver filme no IMDb">
+                        <i class="fab fa-imdb mr-1 text-yellow-500"></i> IMDB
+                    </a>
+                ` : ''}
+            </p>
 
-                    <p class="text-xs text-texto-suave flex justify-center items-center space-x-2">
-                        <a href="https://www.themoviedb.org/movie/${filme.tmdb}" target="_blank" class="text-principal hover:underline font-semibold flex items-center" title="Ver filme no TMDb">
-                            <i class="fas fa-ticket-alt mr-1 text-gray-500"></i> ${filme.tmdb}
-                        </a>
+            <p class="text-xs text-texto-suave truncate">
+                ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
+                ${(filme.pagina && filme.pasta) ? ` | ` : ''}
+                ${filme.pasta ? `Pasta: ${filme.pasta}` : ''}
+            </p>
 
-                        ${filme.imdb ? `
-                        <a href="https://www.imdb.com/title/${filme.imdb}" target="_blank" class="text-principal hover:underline font-semibold flex items-center" title="Ver filme no IMDb">
-                            <i class="fas fa-star mr-1 text-yellow-500"></i> ${filme.imdb}
-                        </a>
-                        ` : ''}
-                    </p>
+            <p class="text-xs font-semibold mt-1 text-texto-suave">
+                ${filme.vote_average ? `
+                    <span class="text-yellow-600">
+                        <i class="fas fa-star mr-1"></i> ${filme.vote_average}
+                    </span>
+                    <span class="text-gray-500 ml-1">|</span>
+                ` : ''}
 
-                    <p class="text-xs text-texto-suave truncate">
-                        ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
-                        ${(filme.pagina && filme.pasta) ? ` | ` : ''}
-                        ${filme.pasta ? `Pasta: ${filme.pasta}` : ''}
-                    </p>
-
-                    <p class="text-xs font-semibold mt-1 text-texto-suave">
-                        <span class="text-gray-500">${filme.id}</span>
-                        <span class="text-gray-500 ml-1">|</span>
-                        <span>${filme.ano}</span>
-                        <span class="ml-1">
-                            | ${filme.cores || 'Cores'}
-                        </span>
-                    </p>
-                </div>
-            `;
+                <span>${filme.ano}</span>
+                <span class="ml-1">
+                    | ${filme.cores || 'Cores'}
+                </span>
+            </p>
+        </div>
+    `;
         // Retorna o elemento DIV (o Node)
         return card;
     }
 
-    /** Ordena a lista localmente. A ordenação principal é feita na consulta Supabase. */
-    function ordenarFilmes(filmesArray) {
-        const criterio = sortCriterio.value;
-        const ordem = sortOrdem.value;
-
-        return filmesArray.sort((a, b) => {
-            let valA, valB;
-
-            // Mapeamento dos campos para as colunas do Supabase
-            switch (criterio) {
-                case 'id':
-                    valA = a.id;
-                    valB = b.id;
-                    break;
-                case 'ano':
-                    valA = a.ano;
-                    valB = b.ano;
-                    break;
-                case 'titulo_original':
-                    valA = a.titulo_original.toLowerCase();
-                    valB = b.titulo_original.toLowerCase();
-                    break;
-                case 'titulo_traduzido':
-                    valA = a.titulo_traduzido.toLowerCase();
-                    valB = b.titulo_traduzido.toLowerCase();
-                    break;
-                default:
-                    valA = a.id;
-                    valB = b.id;
-            }
-
-            if (valA < valB) return ordem === 'crescente' ? -1 : 1;
-            if (valA > valB) return ordem === 'crescente' ? 1 : -1;
-            return 0;
-        });
-    }
-
     // RENDERIZAR FILMES
-    /** Limpa a grade e renderiza os dados da página (filtrados pelo Supabase). */
     function renderizarFilmes() {
 
         loadingSpinner.classList.remove('hidden');
@@ -993,7 +988,6 @@
         }, 50);
     }
 
-    /** Delega os eventos de clique (Editar/Excluir) na grade. */
     gradeFilmes.addEventListener('click', function (e) {
         const target = e.target.closest('.btn-editar, .btn-excluir');
         if (!target) return;
@@ -1007,7 +1001,6 @@
         }
     });
 
-    /** Remove um filme do Supabase, usando o título na confirmação. */
     async function excluirFilme(id) {
 
         // 1. Encontra o objeto do filme no array local
@@ -1033,8 +1026,6 @@
     }
 
     // --- FUNÇÕES DE BUSCA (API TMDb) ---
-
-    /** Busca cartazes alternativos pelo ID TMDb do filme. */
     async function buscarCartazes(tmdbId) {
         cartazesLista.innerHTML = '';
         msgSemCartazes.textContent = 'Carregando cartazes...';
@@ -1086,7 +1077,6 @@
         }
     }
 
-    /** Busca detalhes de um filme pelo seu ID TMDb. */
     async function buscarFilmePorId(tmdbId) {
         if (!tmdbId) return;
 
@@ -1139,7 +1129,6 @@
         }
     }
 
-    /** Busca filmes por título. */
     async function buscarFilmePorTitulo(titulo) {
         if (!titulo) return;
 
@@ -1181,6 +1170,104 @@
         } finally {
             btnBuscarTitulo.innerHTML = '<i class="fas fa-search"></i>';
             btnBuscarTitulo.disabled = false;
+        }
+    }
+
+    /***************************************************/
+    /************* FUNÇÕES DE AUTH E ADMIN UI **********/
+    /***************************************************/
+
+    /** Exibe uma notificação temporária. Usamos alert() como placeholder. */
+    // function exibirToast(mensagem, classeCor) {
+    //     console.log(`[Toast ${classeCor}] ${mensagem}`);
+    //     alert(mensagem);
+    // }
+
+    /** Atualiza a interface (botões de CRUD) baseado no estado de login. */
+    function atualizarUIAdmin(logado) {
+        isLoggedIn = logado;
+
+        // 1. Alterna o botão NOVO e o botão Login/Logout
+        if (logado) {
+            btnNovoFilme.classList.remove('hidden');
+            btnLogin.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> Logout';
+            btnLogin.classList.remove('bg-texto-suave');
+            btnLogin.classList.add('bg-danger');
+            // REMOVIDO: exibirToast('Login realizado com sucesso!', 'bg-edit');
+        } else {
+            btnNovoFilme.classList.add('hidden');
+            btnLogin.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Login';
+            btnLogin.classList.remove('bg-danger');
+            btnLogin.classList.add('bg-texto-suave');
+            // REMOVIDO: exibirToast('Logout realizado com sucesso!', 'bg-principal');
+        }
+
+        // 2. Re-renderiza a lista para atualizar os botões de Editar/Excluir nos cards
+        renderizarFilmes();
+    }
+
+    /** Função principal para fazer login via Supabase Auth. */
+    async function fazerLogin(e) {
+        e.preventDefault();
+
+        const email = inputLoginNome.value.trim();
+        const password = inputLoginSenha.value.trim();
+        mensagemLogin.classList.add('hidden');
+
+        if (!email || !password) return;
+
+        try {
+            // Usa o método Auth, que criptografa e valida a senha no servidor
+            const {error} = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) throw error;
+
+            // Login bem-sucedido
+            atualizarUIAdmin(true);
+            fecharModalLogin();
+
+        } catch (error) {
+            console.error('Erro ao fazer login:', error.message);
+            mensagemLogin.textContent = 'Email ou senha inválidos. Tente novamente.';
+            mensagemLogin.classList.remove('hidden');
+        }
+    }
+
+    /** Função para fazer logout. */
+    async function fazerLogout() {
+        await supabaseClient.auth.signOut();
+        atualizarUIAdmin(false);
+        exibirToast('Logout realizado com sucesso!', 'bg-principal');
+        carregarFilmes(true);
+    }
+
+    /** Abre o modal de login. */
+    function abrirModalLogin() {
+        modalLogin.classList.remove('hidden');
+        modalLogin.classList.add('flex');
+        inputLoginNome.focus();
+    }
+
+    /** Fecha o modal de login. */
+    function fecharModalLogin() {
+        modalLogin.classList.add('hidden');
+        modalLogin.classList.remove('flex');
+        mensagemLogin.classList.add('hidden');
+        formLogin.reset();
+    }
+
+    /** Checa se existe uma sessão Supabase ativa ao carregar a página. */
+    async function checkInitialSession() {
+        const {data: {session}} = await supabaseClient.auth.getSession();
+        if (session) {
+            // Se houver sessão, atualiza a UI para logado
+            atualizarUIAdmin(true);
+        } else {
+            // Se não houver sessão, garante que a UI esteja deslogada
+            atualizarUIAdmin(false);
         }
     }
 
@@ -1417,9 +1504,23 @@
         }
     });
 
+    btnLogin.addEventListener('click', () => {
+        if (isLoggedIn) {
+            fazerLogout(); // Se logado, faz logout
+        } else {
+            abrirModalLogin(); // Se deslogado, abre o modal
+        }
+    });
+
+    btnFecharLogin.addEventListener('click', fecharModalLogin);
+    formLogin.addEventListener('submit', fazerLogin);
+
     // --- INICIALIZAÇÃO ---
-    carregarFilmes(true);
-    alternarBusca('titulo');
+    window.onload = function() {
+        checkInitialSession(); // NOVO: Checa a sessão de login primeiro
+        carregarFilmes(true);
+        alternarBusca('titulo');
+    };
 </script>
 </body>
 </html>
