@@ -109,12 +109,12 @@
 
 <div class="max-w-7xl mx-auto">
     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
+        <h1 class="text-3xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
             🎬 Catálogo de Cartazes de Filmes
             <span id="contador-registros"
                   class="ml-4 text-base font-semibold bg-principal text-white px-3 py-1 rounded-full">
-                    00 Registros
-                </span>
+            00 Registros
+        </span>
         </h1>
 
         <h1 class="text-3xl font-bold text-gray-800 mb-4 sm:mb-0 flex items-center">
@@ -134,12 +134,21 @@
 
     </header>
 
-    <div class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
-        <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-            <i class="fas fa-sort-amount-down-alt mr-2 text-texto-suave"></i> OPÇÕES E BUSCA
+    <div id="opcoes-busca-container" class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
+
+        <h2 id="btn-toggle-busca"
+            class="text-lg font-semibold text-gray-700 mb-3 flex items-center justify-between cursor-pointer p-1">
+            <span class="flex items-center">
+                <i class="fas fa-sort-amount-down-alt mr-2 text-principal"></i>
+                OPÇÕES E BUSCA
+            </span>
+            <i id="icone-toggle-busca" class="fas fa-chevron-down text-principal transition-transform duration-300"></i>
         </h2>
 
-        <div class="bg-white p-4 rounded-lg shadow-md mb-6 border border-suave">
+        <div id="conteudo-busca-colapsavel" class="overflow-hidden transition-all duration-300 ease-in-out max-h-0 border-t">
+
+            <hr class="mb-4 border-suave">
+
             <div class="flex flex-col sm:flex-row gap-4 mb-4">
                 <div class="flex-grow">
                     <label for="filtro-titulo" class="block text-sm font-medium text-gray-700 mb-1">Buscar por
@@ -164,23 +173,22 @@
                     </select>
                 </div>
             </div>
-        </div>
+            <div class="flex flex-wrap gap-4 items-center border-t pt-3 border-suave">
+                <span class="text-sm font-semibold text-gray-700">Ordenação:</span>
+                <select id="sort-criterio"
+                        class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                    <option value="id">ID</option>
+                    <option value="data_release" selected>Ano</option>
+                    <option value="titulo_original">Título Original</option>
+                    <option value="titulo_traduzido">Título Traduzido</option>
+                </select>
 
-        <div class="flex flex-wrap gap-4 items-center border-t pt-3 border-suave">
-            <span class="text-sm font-semibold text-gray-700">Ordenação:</span>
-            <select id="sort-criterio"
-                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
-                <option value="id">ID</option>
-                <option value="data_release" selected>Ano</option>
-                <option value="titulo_original">Título Original</option>
-                <option value="titulo_traduzido">Título Traduzido</option>
-            </select>
-
-            <select id="sort-ordem"
-                    class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
-                <option value="crescente">Crescente</option>
-                <option value="decrescente">Decrescente</option>
-            </select>
+                <select id="sort-ordem"
+                        class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                    <option value="crescente">Crescente</option>
+                    <option value="decrescente">Decrescente</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -534,6 +542,10 @@
     const graficoCanvas = document.getElementById('grafico-filmes');
     const graficoTotalRegistros = document.getElementById('grafico-total-registros');
 
+    const btnToggleBusca = document.getElementById('btn-toggle-busca');
+    const conteudoBuscaColapsavel = document.getElementById('conteudo-busca-colapsavel');
+    const iconeToggleBusca = document.getElementById('icone-toggle-busca');
+
 
     // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
 
@@ -794,6 +806,26 @@
             fecharModal();
         }
     });
+
+    // Adicione esta nova função
+    /** Alterna a visibilidade da seção de filtros principal. */
+    function alternarBuscaPrincipal() {
+        const isCollapsed = conteudoBuscaColapsavel.classList.contains('max-h-0');
+
+        if (isCollapsed) {
+            // Expande
+            conteudoBuscaColapsavel.classList.remove('max-h-0', 'border-t');
+            conteudoBuscaColapsavel.classList.add('max-h-screen');
+            iconeToggleBusca.classList.remove('fa-chevron-down');
+            iconeToggleBusca.classList.add('fa-chevron-up');
+        } else {
+            // Colapsa
+            conteudoBuscaColapsavel.classList.remove('max-h-screen');
+            conteudoBuscaColapsavel.classList.add('max-h-0', 'border-t');
+            iconeToggleBusca.classList.remove('fa-chevron-up');
+            iconeToggleBusca.classList.add('fa-chevron-down');
+        }
+    }
 
     // --- FUNÇÕES DE RENDERIZAÇÃO E ORDENAÇÃO ---
 
@@ -1310,6 +1342,8 @@
     selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
     sortCriterio.addEventListener('change', () => carregarFilmes(true));
     sortOrdem.addEventListener('change', () => carregarFilmes(true));
+
+    btnToggleBusca.addEventListener('click', alternarBuscaPrincipal);
 
     // btnAplicarOrdenacao.addEventListener('click', () => carregarFilmes(true));
 
