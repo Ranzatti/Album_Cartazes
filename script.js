@@ -104,6 +104,11 @@ const btnToggleCartazes = document.getElementById('btn-toggle-cartazes');
 const conteudoCartazesColapsavel = document.getElementById('conteudo-cartazes-colapsavel');
 const iconeToggleCartazes = document.getElementById('icone-toggle-cartazes');
 
+const btnToggleBuscaTmdb = document.getElementById('btn-toggle-busca-tmdb');
+const conteudoBuscaTmdbColapsavel = document.getElementById('conteudo-busca-tmdb-colapsavel');
+const iconeToggleBuscaTmdb = document.getElementById('icone-toggle-busca-tmdb');
+const buscaTmdbWrapper = document.getElementById('busca-tmdb-wrapper');
+
 const debouncedCarregarFilmes = debounce(carregarFilmes, 500);
 
 // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
@@ -279,6 +284,12 @@ function preencherFormulario(filme) {
     iconeToggleCartazes.classList.remove('fa-chevron-up');
     iconeToggleCartazes.classList.add('fa-chevron-down');
 
+    conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
+    conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
+    buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
+    iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
+    iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
+
     buscarCartazes(filme.tmdb);
 
     atualizarLinkTMDB();
@@ -309,6 +320,12 @@ function abrirModalNovo() {
     iconeToggleCartazes.classList.remove('fa-chevron-up');
     iconeToggleCartazes.classList.add('fa-chevron-down');
 
+    conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
+    conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
+    buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
+    iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
+    iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
+
     modal.classList.add('flex');
     atualizarLinkTMDB();
     atualizarLinkIMDB();
@@ -329,6 +346,28 @@ function alternarCartazesAcordeon() {
         conteudoCartazesColapsavel.classList.add('max-h-0');
         iconeToggleCartazes.classList.remove('fa-chevron-up');
         iconeToggleCartazes.classList.add('fa-chevron-down');
+    }
+}
+
+function alternarBuscaTmdbAcordeon() {
+    const isCollapsed = conteudoBuscaTmdbColapsavel.classList.contains('max-h-0');
+
+    if (isCollapsed) {
+        conteudoBuscaTmdbColapsavel.classList.remove('max-h-0');
+        conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]');
+
+        buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
+
+        iconeToggleBuscaTmdb.classList.remove('fa-chevron-down');
+        iconeToggleBuscaTmdb.classList.add('fa-chevron-up');
+    } else {
+        conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
+        conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
+
+        buscaTmdbWrapper.classList.add('pt-3', 'mt-3', 'border-t', 'border-suave');
+
+        iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
+        iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
     }
 }
 
@@ -716,7 +755,7 @@ function atualizarUIAdmin(logado) {
 
     if (logado) {
         btnNovoFilme.classList.remove('hidden');
-        btnLogin.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> Logout';
+        btnLogin.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> LOGOUT';
         btnLogin.classList.remove('bg-texto-suave');
         btnLogin.classList.add('bg-danger');
     } else {
@@ -961,6 +1000,8 @@ btnPrimeira.addEventListener('click', navegarPrimeiraPagina);
 btnUltima.addEventListener('click', navegarUltimaPagina);
 btnAnterior.addEventListener('click', navegarPaginaAnterior);
 btnProximo.addEventListener('click', navegarPaginaProxima);
+
+btnToggleBuscaTmdb.addEventListener('click', alternarBuscaTmdbAcordeon);
 
 btnBuscarTMDBID.addEventListener('click', () => {
     const tmdbId = parseInt(inputTMDBBusca.value.trim());
