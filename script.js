@@ -118,23 +118,23 @@ async function carregarFilmes(resetPagina = false) {
         paginaAtual = 1;
     }
 
-    const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
-    const filtroCor = selectFiltroCores.value;
-    const termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
-
     const inicio = (paginaAtual - 1) * FILMES_POR_PAGINA;
     const fim = inicio + FILMES_POR_PAGINA - 1;
+    const filtroCor = selectFiltroCores.value;
 
-    // Inicia a query base
     let query = supabaseClient.from(SUPABASE_TABLE).select('*', {count: 'exact'});
-
     if (filtroCor && filtroCor.length > 0) {
         query = query.eq('cores', filtroCor);
+
     }
+
+    const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
     if (!isNaN(termoBuscaAno)) {
         query = query.eq('ano', termoBuscaAno);
     }
 
+    let termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
+    termoBuscaTitulo = termoBuscaTitulo.replace(/[,"]/g, '');
     if (termoBuscaTitulo.length > 0) {
         const orFilter = `titulo_traduzido.ilike.%${termoBuscaTitulo}%,titulo_original.ilike.%${termoBuscaTitulo}%`;
         query = query.or(orFilter);
@@ -145,7 +145,15 @@ async function carregarFilmes(resetPagina = false) {
             .range(inicio, fim)
             .order(criterio, {ascending: isAscending});
 
-        if (error) throw error;
+        if (error) {
+            console.error('Erro no carregamento:', error);
+            alert(`Erro ao carregar dados: ${error.message}`);
+            // Se houver erro, garantimos que filmes seja vazio para não renderizar lixo
+            totalRegistros = 0;
+            filmes = [];
+            renderizarFilmes(); // Renderiza para mostrar tela vazia/mensagem de erro
+            return; // Sai da função carregarFilmes se houver erro
+        }
 
         totalRegistros = count || 0;
         filmes = data || [];
@@ -349,12 +357,13 @@ formFilme.addEventListener('submit', async function (e) {
         cores: tipoCorSelecionado ? tipoCorSelecionado.value : 'Cores',
     };
 
+    let error;
     if (editandoId) {
         // MODO EDIÇÃO
         const response = await supabaseClient
             .from(SUPABASE_TABLE)
             .update(dadosFilme)
-            .eq('id', editandoId); // Usa o ID do Supabase para o WHERE
+            .eq('id', editandoId);
         error = response.error;
     } else {
         // MODO NOVO
@@ -579,11 +588,9 @@ async function buscarCartazes(tmdbId) {
                 const img = document.createElement('img');
                 img.src = thumbUrl;
                 img.alt = 'Cartaz Alternativo';
-                // img.className = 'w-16 h-24 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
                 img.className = 'w-full h-36 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
                 img.setAttribute('data-full-url', fullUrl);
 
-                // Adiciona o evento de clique
                 img.addEventListener('click', () => {
                     inputLinkImagem.value = fullUrl;
                     posterPreview.src = fullUrl;
@@ -1002,7 +1009,7 @@ btnFecharGrafico.addEventListener('click', fecharModalGrafico);
 
 // Opcional: Fechar gráfico com ESC
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' || e.keyCode === 27) {
+    if (e.key === 'Escape') {
         if (!modalGrafico.classList.contains('hidden')) {
             fecharModalGrafico();
         }
