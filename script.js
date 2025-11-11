@@ -48,46 +48,36 @@ const inputLinkImagem = document.getElementById('link-imagem');
 const inputTituloOriginal = document.getElementById('titulo-original');
 const inputSinopse = document.getElementById('sinopse');
 const posterPreview = document.getElementById('poster-preview');
-
+const modalContentContainer = document.getElementById('modal-content-container');
 const cartazesAlternativosContainer = document.getElementById('cartazes-alternativos-container');
 const cartazesLista = document.getElementById('cartazes-lista');
 const msgSemCartazes = document.getElementById('msg-sem-cartazes');
-
 const sortCriterio = document.getElementById('sort-criterio');
 const sortOrdem = document.getElementById('sort-ordem');
-
 const inputBuscaTitulo = document.getElementById('busca-titulo');
 const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
 const resultadosBuscaTitulo = document.getElementById('resultados-busca-titulo');
 const buscaIDMsg = document.getElementById('busca-id-msg');
 const contadorRegistros = document.getElementById('contador-registros');
-
 const inputFiltroTitulo = document.getElementById('filtro-titulo');
 const inputFiltroAno = document.getElementById('filtro-ano');
-
 const selectFiltroCores = document.getElementById('filtro-cores');
-
 const radioBuscaTMDBId = document.getElementById('radio-busca-tmdb-id');
 const radioBuscaTitulo = document.getElementById('radio-busca-titulo');
 const buscaIdContainer = document.getElementById('busca-id-container');
 const buscaTituloContainer = document.getElementById('busca-titulo-container');
-
 const loadingSpinner = document.getElementById('loading-spinner');
-
 const btnAnterior = document.getElementById('btn-anterior');
 const btnProximo = document.getElementById('btn-proximo');
 const infoPaginacao = document.getElementById('info-paginacao');
 const btnPrimeira = document.getElementById('btn-primeira');
 const btnUltima = document.getElementById('btn-ultima');
-
 const linkTMDBModal = document.getElementById('link-tmdb-modal');
 const linkIMDBModal = document.getElementById('link-imdb-modal');
-
 const btnModalGrafico = document.getElementById('btn-modal-grafico');
 const modalGrafico = document.getElementById('modal-grafico');
 const btnFecharGrafico = document.getElementById('btn-fechar-grafico');
 const graficoTotalRegistros = document.getElementById('grafico-total-registros');
-
 const btnLogin = document.getElementById('btn-login');
 const modalLogin = document.getElementById('modal-login');
 const btnFecharLogin = document.getElementById('btn-fechar-login');
@@ -95,21 +85,21 @@ const formLogin = document.getElementById('form-login');
 const inputLoginNome = document.getElementById('input-login-nome');
 const inputLoginSenha = document.getElementById('input-login-senha');
 const mensagemLogin = document.getElementById('mensagem-login');
-
 const btnToggleBusca = document.getElementById('btn-toggle-busca');
 const conteudoBuscaColapsavel = document.getElementById('conteudo-busca-colapsavel');
 const iconeToggleBusca = document.getElementById('icone-toggle-busca');
-
 const btnToggleCartazes = document.getElementById('btn-toggle-cartazes');
 const conteudoCartazesColapsavel = document.getElementById('conteudo-cartazes-colapsavel');
 const iconeToggleCartazes = document.getElementById('icone-toggle-cartazes');
-
 const btnToggleBuscaTmdb = document.getElementById('btn-toggle-busca-tmdb');
 const conteudoBuscaTmdbColapsavel = document.getElementById('conteudo-busca-tmdb-colapsavel');
 const iconeToggleBuscaTmdb = document.getElementById('icone-toggle-busca-tmdb');
 const buscaTmdbWrapper = document.getElementById('busca-tmdb-wrapper');
 
 const debouncedCarregarFilmes = debounce(carregarFilmes, 500);
+
+const debouncedBuscarFilmePorId = debounce(buscarFilmePorId, 800);   // 800ms para ID
+const debouncedBuscarFilmePorTitulo = debounce(buscarFilmePorTitulo, 800); // 800ms para Título
 
 // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
 async function carregarFilmes(resetPagina = false) {
@@ -290,6 +280,10 @@ function preencherFormulario(filme) {
     iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
     iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
 
+    if (modalContentContainer) {
+        modalContentContainer.scrollTop = 0;
+    }
+
     buscarCartazes(filme.tmdb);
 
     atualizarLinkTMDB();
@@ -325,6 +319,10 @@ function abrirModalNovo() {
     buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
     iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
     iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
+
+    if (modalContentContainer) {
+        modalContentContainer.scrollTop = 0;
+    }
 
     modal.classList.add('flex');
     atualizarLinkTMDB();
@@ -1003,19 +1001,37 @@ btnProximo.addEventListener('click', navegarPaginaProxima);
 
 btnToggleBuscaTmdb.addEventListener('click', alternarBuscaTmdbAcordeon);
 
-btnBuscarTMDBID.addEventListener('click', () => {
-    const tmdbId = parseInt(inputTMDBBusca.value.trim());
-    if (tmdbId) {
-        buscarFilmePorId(tmdbId);
+inputTMDBBusca.addEventListener('input', (e) => {
+    const tmdbId = parseInt(e.target.value.trim());
+    if (!isNaN(tmdbId)) {
+        debouncedBuscarFilmePorId(tmdbId);
     }
 });
 
-btnBuscarTitulo.addEventListener('click', () => {
-    const titulo = inputBuscaTitulo.value.trim();
-    if (titulo) {
-        buscarFilmePorTitulo(titulo);
+inputBuscaTitulo.addEventListener('input', (e) => {
+    const titulo = e.target.value.trim();
+    if (titulo.length > 2) { // Adiciona um limite mínimo para evitar buscas excessivas
+        debouncedBuscarFilmePorTitulo(titulo);
+    }
+    // Opcional: Limpar resultados se o campo estiver vazio
+    if (titulo.length === 0) {
+        resultadosBuscaTitulo.innerHTML = '';
     }
 });
+
+// btnBuscarTMDBID.addEventListener('click', () => {
+//     const tmdbId = parseInt(inputTMDBBusca.value.trim());
+//     if (tmdbId) {
+//         buscarFilmePorId(tmdbId);
+//     }
+// });
+//
+// btnBuscarTitulo.addEventListener('click', () => {
+//     const titulo = inputBuscaTitulo.value.trim();
+//     if (titulo) {
+//         buscarFilmePorTitulo(titulo);
+//     }
+// });
 
 inputCodigoTMDB.addEventListener('input', atualizarLinkTMDB);
 inputCodigoIMDB.addEventListener('input', atualizarLinkIMDB);
