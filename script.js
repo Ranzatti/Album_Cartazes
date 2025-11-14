@@ -600,6 +600,7 @@ async function excluirFilme(id) {
 }
 
 // --- FUNÇÕES DE BUSCA (API TMDb) ---
+// --- FUNÇÕES DE BUSCA (API TMDb) ---
 async function buscarCartazes(tmdbId) {
     cartazesLista.innerHTML = '';
     msgSemCartazes.textContent = 'Carregando cartazes...';
@@ -613,21 +614,49 @@ async function buscarCartazes(tmdbId) {
 
         const data = await response.json();
 
-        const cartazesBR = data.posters
-            .filter(poster => poster.iso_639_1 === 'pt' || poster.iso_639_1 === 'en' || !poster.iso_639_1)
-            .sort((a, b) => b.vote_count - a.vote_count);
+        // ** NOVA LÓGICA DE ORDENAÇÃO: 1º en/sem idioma, 2º pt, 3º por votos **
+        const cartazesOrdenados = data.posters
+            .sort((a, b) => {
+                const aIsEn = a.iso_639_1 === 'en' || !a.iso_639_1;
+                const bIsEn = b.iso_639_1 === 'en' || !b.iso_639_1;
 
-        if (cartazesBR.length > 0) {
+                // Prioridade 1: EN ou sem idioma (que geralmente é o EN)
+                if (aIsEn && !bIsEn) return -1;
+                if (!aIsEn && bIsEn) return 1;
+
+                const aIsPt = a.iso_639_1 === 'pt';
+                const bIsPt = b.iso_639_1 === 'pt';
+
+                // Prioridade 2: PT
+                if (aIsPt && !bIsPt) return -1;
+                if (!aIsPt && bIsPt) return 1;
+
+                return b.vote_count - a.vote_count; // Desempate por votos
+            });
+
+        // Filtra apenas os 50 melhores ou os primeiros 50
+        const cartazesFinais = cartazesOrdenados.slice(0, 50);
+
+        if (cartazesFinais.length > 0) {
             msgSemCartazes.classList.add('hidden');
 
-            cartazesBR.forEach(poster => {
+            let defaultPosterSet = false;
+
+            cartazesFinais.forEach(poster => {
                 const fullPath = poster.file_path;
                 const thumbUrl = `${BASE_THUMB_URL}${fullPath}`;
                 const fullUrl = `${BASE_IMAGE_URL}${fullPath}`;
 
+                // ** NOVIDADE: Define o primeiro cartaz EN/sem idioma como o padrão **
+                if (!defaultPosterSet && (poster.iso_639_1 === 'en' || !poster.iso_639_1)) {
+                    inputLinkImagem.value = fullUrl;
+                    posterPreview.src = fullUrl;
+                    defaultPosterSet = true; // Garante que só define uma vez
+                }
+
                 const img = document.createElement('img');
                 img.src = thumbUrl;
-                img.alt = 'Cartaz Alternativo';
+                img.alt = `Cartaz Alternativo (${poster.iso_639_1 || 'N/A'})`;
                 img.className = 'w-full h-36 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
                 img.setAttribute('data-full-url', fullUrl);
 
@@ -638,6 +667,10 @@ async function buscarCartazes(tmdbId) {
 
                 cartazesLista.appendChild(img);
             });
+
+            // Se nenhum cartaz EN/sem idioma foi encontrado (situação rara), o cartaz
+            // principal vindo de buscarFilmePorId será mantido.
+
         } else {
             msgSemCartazes.textContent = 'Nenhum cartaz alternativo encontrado.';
             msgSemCartazes.classList.remove('hidden');
@@ -719,13 +752,26 @@ async function buscarFilmePorTitulo(titulo) {
 
         if (data.results && data.results.length > 0) {
             data.results.slice(0, 5).forEach(filme => {
+
+                // ** NOVIDADE: Gera o HTML da imagem do cartaz **
+                const posterPath = filme.poster_path;
+                const posterHtml = posterPath
+                    ? `<img src="${BASE_THUMB_URL}${posterPath}" class="w-8 h-12 object-cover rounded-sm mr-2 border border-suave" alt="Cartaz">`
+                    : `<div class="w-8 h-12 flex items-center justify-center mr-2 bg-gray-200 text-xs text-texto-suave rounded-sm">?</div>`;
+
                 const item = document.createElement('div');
                 item.className = 'p-2 bg-white hover:bg-destaque-card cursor-pointer rounded-md border border-suave text-sm flex justify-between items-center';
                 item.setAttribute('data-tmdb-id', filme.id);
+
+                // ** NOVIDADE: Insere a imagem e o nome/ano lado a lado **
                 item.innerHTML = `
-                        <span>${filme.title} (${filme.release_date ? filme.release_date.substring(0, 4) : 'N/A'})</span>
+                        <span class="flex items-center">
+                            ${posterHtml}
+                            <span>${filme.title} (${filme.release_date ? filme.release_date.substring(0, 4) : 'N/A'})</span>
+                        </span>
                         <i class="fas fa-hand-pointer text-principal"></i>
                     `;
+
                 item.addEventListener('click', () => {
                     buscarFilmePorId(filme.id);
                     resultadosBuscaTitulo.innerHTML = '';
