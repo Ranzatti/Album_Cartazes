@@ -264,21 +264,18 @@ function preencherFormulario(filme) {
     inputTMDBBusca.value = filme.tmdb;
     resultadosBuscaTitulo.innerHTML = '';
     buscaIDMsg.classList.add('hidden');
-    // cartazesAlternativosContainer.classList.add('hidden');
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
+    // Estado do Acordeão de Cartazes (Sempre Colapsado na Edição)
     conteudoCartazesColapsavel.classList.remove('max-h-screen');
     conteudoCartazesColapsavel.classList.add('max-h-0');
     iconeToggleCartazes.classList.remove('fa-chevron-up');
     iconeToggleCartazes.classList.add('fa-chevron-down');
 
-    conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
-    conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
-    buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
-    iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
-    iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
+    // ** Lógica da busca TMDb: COLAPSADO na Edição **
+    alternarBuscaTmdbAcordeon(false);
 
     if (modalContentContainer) {
         modalContentContainer.scrollTop = 0;
@@ -309,16 +306,15 @@ function abrirModalNovo() {
     cartazesAlternativosContainer.classList.add('hidden');
     modal.classList.remove('hidden');
 
+    // Estado do Acordeão de Cartazes (Sempre Colapsado ao Abrir Novo)
     conteudoCartazesColapsavel.classList.remove('max-h-screen');
     conteudoCartazesColapsavel.classList.add('max-h-0');
     iconeToggleCartazes.classList.remove('fa-chevron-up');
     iconeToggleCartazes.classList.add('fa-chevron-down');
 
-    conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
-    conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
-    buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
-    iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
-    iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
+    // ** Lógica da busca TMDb: ABERTO no Novo **
+    alternarBuscaTmdbAcordeon(true);
+    alternarBusca('titulo'); // Define busca por título como padrão ao abrir Novo
 
     if (modalContentContainer) {
         modalContentContainer.scrollTop = 0;
@@ -327,6 +323,8 @@ function abrirModalNovo() {
     modal.classList.add('flex');
     atualizarLinkTMDB();
     atualizarLinkIMDB();
+
+    inputBuscaTitulo.focus();
 }
 
 function alternarCartazesAcordeon() {
@@ -347,21 +345,26 @@ function alternarCartazesAcordeon() {
     }
 }
 
-function alternarBuscaTmdbAcordeon() {
+function alternarBuscaTmdbAcordeon(abrir = false) {
     const isCollapsed = conteudoBuscaTmdbColapsavel.classList.contains('max-h-0');
 
-    if (isCollapsed) {
+    // Verifica se deve abrir (se for forçado OU se estiver colapsado)
+    if (abrir || isCollapsed) {
+        // ABRIR
         conteudoBuscaTmdbColapsavel.classList.remove('max-h-0');
-        conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]');
+        conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]'); // Abre
 
+        // Remove classes de separação visual quando está aberto
         buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
 
         iconeToggleBuscaTmdb.classList.remove('fa-chevron-down');
         iconeToggleBuscaTmdb.classList.add('fa-chevron-up');
     } else {
+        // COLAPSAR (Apenas se não for forçado a abrir e estiver aberto)
         conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
         conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
 
+        // Adiciona classes de separação visual quando fechado
         buscaTmdbWrapper.classList.add('pt-3', 'mt-3', 'border-t', 'border-suave');
 
         iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
