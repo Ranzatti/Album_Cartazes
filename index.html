@@ -93,8 +93,7 @@
 
             <div class="flex flex-col sm:flex-row gap-4 mb-4">
                 <div class="flex-grow">
-                    <label for="filtro-titulo" class="block text-sm font-medium text-gray-700 mb-1">Buscar por
-                        Título:</label>
+                    <label for="filtro-titulo" class="block text-sm font-medium text-gray-700 mb-1">Buscar por Título:</label>
                     <input type="text" id="filtro-titulo" placeholder="Digite o título ou parte dele..."
                            class="w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
                 </div>
@@ -117,16 +116,16 @@
             </div>
             <div class="flex flex-wrap gap-4 items-center border-t pt-3 border-suave">
                 <span class="text-sm font-semibold text-gray-700">Ordenação:</span>
-                <label for="sort-criterio"></label><select id="sort-criterio"
-                                                           class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                <label for="sort-criterio"></label>
+                <select id="sort-criterio" class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
                 <option value="id">ID</option>
                 <option value="data_release" selected>Ano</option>
                 <option value="titulo_original">Título Original</option>
                 <option value="titulo_traduzido">Título Traduzido</option>
             </select>
 
-                <label for="sort-ordem"></label><select id="sort-ordem"
-                                                        class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
+                <label for="sort-ordem"></label>
+                <select id="sort-ordem" class="p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-sm">
                 <option value="crescente">Crescente</option>
                 <option value="decrescente">Decrescente</option>
             </select>
@@ -136,8 +135,7 @@
 
     <main id="grade-filmes"
           class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        <p id="msg-sem-filmes" class="col-span-full text-center text-texto-suave italic hidden">Nenhum filme catalogado.
-            Use o botão "+ NOVO" para começar!</p>
+        <p id="msg-sem-filmes" class="col-span-full text-center text-texto-suave italic hidden">Nenhum filme catalogado. Use o botão "+ NOVO" para começar!</p>
     </main>
 
     <div id="paginacao-container" class="mt-6 flex justify-center items-center space-x-4">
