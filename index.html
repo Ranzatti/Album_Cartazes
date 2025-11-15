@@ -167,7 +167,8 @@
 </div>
 
 <div id="modal-filme" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center p-4 z-50">
-    <div id="modal-content-container" class="bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 overflow-y-auto max-h-[90vh]">
+    <div id="modal-content-container"
+         class="bg-white rounded-xl shadow-2xl w-full max-w-4xl transform transition-all duration-300 overflow-y-auto max-h-[90vh]">
         <div class="p-6 border-b border-suave flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
                 <i class="fas fa-sort-amount-down-alt mr-2 text-texto-suave"></i> OPÇÕES E BUSCA
@@ -186,9 +187,9 @@
             <div class="border p-4 rounded-lg bg-gray-50 mb-4">
                 <h3 id="btn-toggle-busca-tmdb"
                     class="font-semibold text-gray-700 flex items-center justify-between cursor-pointer p-1">
-                    <span class="flex items-center">
-                        <i class="fas fa-search mr-2"></i> SELECIONE O MODO DE BUSCA (TMDb)
-                    </span>
+            <span class="flex items-center">
+                <i class="fas fa-search mr-2"></i> SELECIONE O MODO DE BUSCA (TMDb)
+            </span>
                     <i id="icone-toggle-busca-tmdb"
                        class="fas fa-chevron-down text-principal transition-transform duration-300"></i>
                 </h3>
@@ -224,14 +225,12 @@
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
-                            <p id="busca-id-msg" class="text-xs text-danger mt-1 hidden">Erro na busca ou filme não
-                                encontrado.</p>
+                            <p id="busca-id-msg" class="text-xs text-danger mt-1 hidden">Erro na busca ou filme não encontrado.</p>
                         </div>
 
                         <div id="busca-titulo-container" class="hidden">
                             <h3 class="font-semibold text-gray-700 mb-3 flex items-center"><i
-                                    class="fas fa-film mr-2"></i> Buscar
-                                Filme por Título (TMDb)</h3>
+                                    class="fas fa-film mr-2"></i> Buscar Filme por Título (TMDb)</h3>
                             <div class="flex gap-2 mb-2">
                                 <input type="text" id="busca-titulo" placeholder="Título do filme (em português)"
                                        class="flex-grow p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
@@ -249,124 +248,121 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
 
-                <div class="md:col-span-2">
-                    <label for="titulo-traduzido" class="block text-sm font-medium text-gray-700">Título Traduzido <span
-                            class="text-danger">*</span></label>
-                    <input type="text" id="titulo-traduzido" required
-                           class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal input-uppercase">
-                </div>
+                <div class="col-span-2 space-y-4">
 
-                <div class="md:col-span-2 grid grid-cols-3 gap-4">
-                    <div class="col-span-2">
-                        <label for="titulo-original" class="block text-sm font-medium text-gray-700">Título
-                            Original</label>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label for="codigo-tmdb" class="block text-sm font-medium text-gray-700">TMDb <span class="text-danger">*</span></label>
+                            <div class="input-icon-group mt-1">
+                                <input type="text" id="codigo-tmdb" required
+                                       class="focus:ring-principal focus:border-principal">
+                                <a id="link-tmdb-modal" href="#" target="_blank"
+                                   class="bg-principal text-white hover:bg-blue-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
+                                   title="Ver filme no TMDb">
+                                    <i class="fas fa-ticket-alt"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="codigo-imdb" class="block text-sm font-medium text-gray-700">IMDb</label>
+                            <div class="input-icon-group mt-1">
+                                <input type="text" id="codigo-imdb" class="focus:ring-principal focus:border-principal">
+                                <a id="link-imdb-modal" href="#" target="_blank"
+                                   class="bg-yellow-500 text-white hover:bg-yellow-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
+                                   title="Ver filme no IMDb">
+                                    <i class="fab fa-imdb"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="data-release" class="block text-sm font-medium text-gray-700">Data Release</label>
+                            <input type="date" id="data-release"
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="titulo-original" class="block text-sm font-medium text-gray-700">Título Original</label>
                         <input type="text" id="titulo-original"
                                class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal input-uppercase">
                     </div>
-                    <div>
-                        <label for="data-release" class="block text-sm font-medium text-gray-700">Data
-                            Lançamento</label>
-                        <input type="date" id="data-release"
-                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
-                    </div>
-                </div>
-
-                <div class="md:col-span-2 grid grid-cols-3 gap-4">
-                    <div>
-                        <label for="ano" class="block text-sm font-medium text-gray-700">Ano <span
-                                class="text-danger">*</span></label>
-                        <input type="number" id="ano" required
-                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
-                    </div>
 
                     <div>
-                        <label for="codigo-tmdb" class="block text-sm font-medium text-gray-700">Código TMDb <span
-                                class="text-danger">*</span></label>
-                        <div class="input-icon-group mt-1">
-                            <input type="text" id="codigo-tmdb" required
-                                   class="focus:ring-principal focus:border-principal">
-                            <a id="link-tmdb-modal" href="#" target="_blank"
-                               class="bg-principal text-white hover:bg-blue-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
-                               title="Ver filme no TMDb">
-                                <i class="fas fa-ticket-alt"></i>
-                            </a>
+                        <label for="titulo-traduzido" class="block text-sm font-medium text-gray-700">Título Traduzido
+                            <span class="text-danger">*</span></label>
+                        <input type="text" id="titulo-traduzido" required
+                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal input-uppercase">
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-4 items-end">
+                        <div>
+                            <label for="ano" class="block text-sm font-medium text-gray-700">Ano</label>
+                            <input type="number" id="ano"
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                        </div>
+
+                        <div>
+                            <label for="pasta" class="block text-sm font-medium text-gray-700">Pasta</label>
+                            <input type="text" id="pasta"
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                        </div>
+
+                        <div>
+                            <label for="pagina" class="block text-sm font-medium text-gray-700">Página</label>
+                            <input type="text" id="pagina"
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                        </div>
+
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cor</label>
+                            <div class="flex items-center space-x-4 mt-1 p-2 border border-suave rounded-lg bg-white h-10">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="tipoCor" id="radio-pb" value="Preto Branco"
+                                           class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Preto Branco</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="tipoCor" id="radio-cores" value="Cores" checked
+                                           class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
+                                    <span class="ml-2 text-sm text-gray-700">Cores</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label for="codigo-imdb" class="block text-sm font-medium text-gray-700">Código IMDB</label>
-                        <div class="input-icon-group mt-1">
-                            <input type="text" id="codigo-imdb"
-                                   class="focus:ring-principal focus:border-principal">
-                            <a id="link-imdb-modal" href="#" target="_blank"
-                               class="bg-yellow-500 text-white hover:bg-yellow-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
-                               title="Ver filme no IMDb">
-                                <i class="fab fa-imdb"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="md:col-span-2 grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Cor</label>
-                        <div class="flex items-center space-x-4 mt-1">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" name="tipoCor" id="radio-pb" value="Preto Branco"
-                                       class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
-                                <span class="ml-2 text-sm text-gray-700">P/B</span>
-                            </label>
-                            <label class="flex items-center cursor-pointer">
-                                <input type="radio" name="tipoCor" id="radio-cores" value="Cores" checked
-                                       class="h-4 w-4 text-principal focus:ring-principal border-gray-300">
-                                <span class="ml-2 text-sm text-gray-700">Cor</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="pagina" class="block text-sm font-medium text-gray-700">Página</label>
-                        <input type="text" id="pagina"
+                        <label for="link-imagem" class="block text-sm font-medium text-gray-700">Link Imagem</label>
+                        <input type="url" id="link-imagem"
                                class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
                     </div>
 
+                </div>
+
+                <div class="col-span-1 flex flex-col space-y-4">
                     <div>
-                        <label for="pasta" class="block text-sm font-medium text-gray-700">Pasta</label>
-                        <input type="text" id="pasta"
-                               class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                        <img id="poster-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+                             alt="Pré-visualização do Cartaz" class="p-1 border border-suave rounded-lg w-full">
                     </div>
-                </div>
-            </div>
 
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Pré-visualização do Cartaz</label>
-                    <img id="poster-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
-                         alt="Pré-visualização do Cartaz" class="p-2 border border-suave rounded-lg max-w-full">
-                </div>
-                <div>
-                    <label for="sinopse" class="block text-sm font-medium text-gray-700">Sinopse</label>
-                    <textarea id="sinopse" rows="18"
-                              class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal resize-none"></textarea>
                 </div>
             </div>
 
             <div>
-                <label for="link-imagem" class="block text-sm font-medium text-gray-700">Link da Imagem do
-                    Cartaz</label>
-                <input type="url" id="link-imagem"
-                       class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                <label for="sinopse" class="block text-sm font-medium text-gray-700">Sinopse</label>
+                <textarea id="sinopse" rows="11"
+                          class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal resize-none"></textarea>
             </div>
 
             <div id="cartazes-alternativos-container" class="border p-4 rounded-lg bg-gray-50">
                 <h3 id="btn-toggle-cartazes"
                     class="font-semibold text-gray-700 flex items-center justify-between cursor-pointer p-1">
-                    <span class="flex items-center">
-                        <i class="fas fa-images mr-2"></i> Cartazes Alternativos
-                    </span>
+            <span class="flex items-center">
+                <i class="fas fa-images mr-2"></i> Cartazes Alternativos
+            </span>
                     <i id="icone-toggle-cartazes"
                        class="fas fa-chevron-down text-principal transition-transform duration-300"></i>
                 </h3>
