@@ -6,8 +6,8 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SUPABASE_TABLE = 'album';
 
 // ** 2. INICIALIZAÇÃO SUPABASE **
-const {createClient} = supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+// const {createClient} = supabase;
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- Variáveis TMDb ---
 const TMDB_API_KEY = '2b0120b7e901bbe70b631b2273fe28c9';
@@ -237,14 +237,12 @@ function preencherFormulario(filme) {
     inputTMDBBusca.value = '';
     modalTitulo.textContent = `Editar Filme (ID: ${filme.id})`;
 
-    // Mapeamento das colunas da tabela 'album' para os campos do formulário
     inputID.value = filme.id;
     inputTituloTraduzido.value = filme.titulo_traduzido || '';
     inputAno.value = filme.ano;
     inputCodigoTMDB.value = filme.tmdb;
     inputCodigoIMDB.value = filme.imdb || '';
 
-    // Tipo de Cor (coluna 'cores')
     if (filme.cores === 'Preto Branco') {
         radioPB.checked = true;
         radioCores.checked = false;
@@ -268,14 +266,8 @@ function preencherFormulario(filme) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 
-    // Estado do Acordeão de Cartazes (Sempre Colapsado na Edição)
-    conteudoCartazesColapsavel.classList.remove('max-h-screen');
-    conteudoCartazesColapsavel.classList.add('max-h-0');
-    iconeToggleCartazes.classList.remove('fa-chevron-up');
-    iconeToggleCartazes.classList.add('fa-chevron-down');
-
-    // ** Lógica da busca TMDb: COLAPSADO na Edição **
-    alternarBuscaTmdbAcordeon(false);
+    colapsarCartazes();
+    colapsarBuscaTmdb();
 
     if (modalContentContainer) {
         modalContentContainer.scrollTop = 0;
@@ -292,7 +284,6 @@ function abrirModalEdicao(id) {
     if (!filme) return;
 
     colapsarBuscaTmdb();
-
     preencherFormulario(filme);
 }
 
@@ -308,13 +299,7 @@ function abrirModalNovo() {
     cartazesAlternativosContainer.classList.add('hidden');
     modal.classList.remove('hidden');
 
-    // Estado do Acordeão de Cartazes (Sempre Colapsado ao Abrir Novo)
-    conteudoCartazesColapsavel.classList.remove('max-h-screen');
-    conteudoCartazesColapsavel.classList.add('max-h-0');
-    iconeToggleCartazes.classList.remove('fa-chevron-up');
-    iconeToggleCartazes.classList.add('fa-chevron-down');
-
-    // ** Lógica da busca TMDb: ABERTO no Novo **
+    colapsarCartazes();
     expandirBuscaTmdb();
     alternarBusca('titulo');
 
@@ -333,25 +318,29 @@ function alternarCartazesAcordeon() {
     const isCollapsed = conteudoCartazesColapsavel.classList.contains('max-h-0');
 
     if (isCollapsed) {
-        // Expande
-        conteudoCartazesColapsavel.classList.remove('max-h-0');
-        conteudoCartazesColapsavel.classList.add('max-h-screen');
-        iconeToggleCartazes.classList.remove('fa-chevron-down');
-        iconeToggleCartazes.classList.add('fa-chevron-up');
+        expandirCartazes();
     } else {
-        // Colapsa
-        conteudoCartazesColapsavel.classList.remove('max-h-screen');
-        conteudoCartazesColapsavel.classList.add('max-h-0');
-        iconeToggleCartazes.classList.remove('fa-chevron-up');
-        iconeToggleCartazes.classList.add('fa-chevron-down');
+        colapsarCartazes();
     }
 }
 
-// script.js - MANTENHA ESTAS DUAS FUNÇÕES
+function expandirCartazes() {
+    conteudoCartazesColapsavel.classList.remove('max-h-0');
+    conteudoCartazesColapsavel.classList.add('max-h-[500px]', 'overflow-y-auto');
+    iconeToggleCartazes.classList.remove('fa-chevron-down');
+    iconeToggleCartazes.classList.add('fa-chevron-up');
+}
+
+function colapsarCartazes() {
+    conteudoCartazesColapsavel.classList.remove('max-h-[500px]', 'overflow-y-auto');
+    conteudoCartazesColapsavel.classList.add('max-h-0');
+    iconeToggleCartazes.classList.remove('fa-chevron-up');
+    iconeToggleCartazes.classList.add('fa-chevron-down');
+}
+
 function expandirBuscaTmdb() {
     conteudoBuscaTmdbColapsavel.classList.remove('max-h-0');
     conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]');
-    // Remove classes de separação visual quando está aberto
     buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
     iconeToggleBuscaTmdb.classList.remove('fa-chevron-down');
     iconeToggleBuscaTmdb.classList.add('fa-chevron-up');
@@ -360,7 +349,6 @@ function expandirBuscaTmdb() {
 function colapsarBuscaTmdb() {
     conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
     conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
-    // Adiciona classes de separação visual quando fechado
     buscaTmdbWrapper.classList.add('pt-3', 'mt-3', 'border-t', 'border-suave');
     iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
     iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
@@ -376,7 +364,6 @@ formFilme.addEventListener('submit', async function (e) {
 
     const tipoCorSelecionado = document.querySelector('input[name="tipoCor"]:checked');
 
-    // Mapeamento dos campos do formulário para as COLUNAS da tabela 'album'
     const dadosFilme = {
         tmdb: getIntOrNull(inputCodigoTMDB.value),
         imdb: inputCodigoIMDB.value.trim() || null,
@@ -420,13 +407,11 @@ function alternarBuscaPrincipal() {
     const isCollapsed = conteudoBuscaColapsavel.classList.contains('max-h-0');
 
     if (isCollapsed) {
-        // Expande
         conteudoBuscaColapsavel.classList.remove('max-h-0', 'border-t');
         conteudoBuscaColapsavel.classList.add('max-h-screen');
         iconeToggleBusca.classList.remove('fa-chevron-down');
         iconeToggleBusca.classList.add('fa-chevron-up');
     } else {
-        // Colapsa
         conteudoBuscaColapsavel.classList.remove('max-h-screen');
         conteudoBuscaColapsavel.classList.add('max-h-0', 'border-t');
         iconeToggleBusca.classList.remove('fa-chevron-up');
@@ -594,7 +579,6 @@ async function excluirFilme(id) {
 }
 
 // --- FUNÇÕES DE BUSCA (API TMDb) ---
-// --- FUNÇÕES DE BUSCA (API TMDb) ---
 async function buscarCartazes(tmdbId) {
     cartazesLista.innerHTML = '';
     msgSemCartazes.textContent = 'Carregando cartazes...';
@@ -641,17 +625,16 @@ async function buscarCartazes(tmdbId) {
                 const thumbUrl = `${BASE_THUMB_URL}${fullPath}`;
                 const fullUrl = `${BASE_IMAGE_URL}${fullPath}`;
 
-                // ** NOVIDADE: Define o primeiro cartaz EN/sem idioma como o padrão **
-                if (!defaultPosterSet && (poster.iso_639_1 === 'en' || !poster.iso_639_1)) {
+                if (editandoId === null && !defaultPosterSet && (poster.iso_639_1 === 'en' || !poster.iso_639_1)) {
                     inputLinkImagem.value = fullUrl;
                     posterPreview.src = fullUrl;
-                    defaultPosterSet = true; // Garante que só define uma vez
+                    defaultPosterSet = true;
                 }
 
                 const img = document.createElement('img');
                 img.src = thumbUrl;
                 img.alt = `Cartaz Alternativo (${poster.iso_639_1 || 'N/A'})`;
-                img.className = 'w-full h-36 object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
+                img.className = 'w-full h-auto aspect-[2/3] object-cover rounded-md cursor-pointer border-2 border-transparent hover:border-principal transition duration-150';
                 img.setAttribute('data-full-url', fullUrl);
 
                 img.addEventListener('click', () => {
