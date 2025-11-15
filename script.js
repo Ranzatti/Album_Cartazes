@@ -291,6 +291,8 @@ function abrirModalEdicao(id) {
     const filme = filmes.find(f => f.id === id);
     if (!filme) return;
 
+    colapsarBuscaTmdb();
+
     preencherFormulario(filme);
 }
 
@@ -313,8 +315,8 @@ function abrirModalNovo() {
     iconeToggleCartazes.classList.add('fa-chevron-down');
 
     // ** Lógica da busca TMDb: ABERTO no Novo **
-    alternarBuscaTmdbAcordeon(true);
-    alternarBusca('titulo'); // Define busca por título como padrão ao abrir Novo
+    expandirBuscaTmdb();
+    alternarBusca('titulo');
 
     if (modalContentContainer) {
         modalContentContainer.scrollTop = 0;
@@ -345,31 +347,23 @@ function alternarCartazesAcordeon() {
     }
 }
 
-function alternarBuscaTmdbAcordeon(abrir = false) {
-    const isCollapsed = conteudoBuscaTmdbColapsavel.classList.contains('max-h-0');
+// script.js - MANTENHA ESTAS DUAS FUNÇÕES
+function expandirBuscaTmdb() {
+    conteudoBuscaTmdbColapsavel.classList.remove('max-h-0');
+    conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]');
+    // Remove classes de separação visual quando está aberto
+    buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
+    iconeToggleBuscaTmdb.classList.remove('fa-chevron-down');
+    iconeToggleBuscaTmdb.classList.add('fa-chevron-up');
+}
 
-    // Verifica se deve abrir (se for forçado OU se estiver colapsado)
-    if (abrir || isCollapsed) {
-        // ABRIR
-        conteudoBuscaTmdbColapsavel.classList.remove('max-h-0');
-        conteudoBuscaTmdbColapsavel.classList.add('max-h-[700px]'); // Abre
-
-        // Remove classes de separação visual quando está aberto
-        buscaTmdbWrapper.classList.remove('pt-3', 'mt-3', 'border-t', 'border-suave');
-
-        iconeToggleBuscaTmdb.classList.remove('fa-chevron-down');
-        iconeToggleBuscaTmdb.classList.add('fa-chevron-up');
-    } else {
-        // COLAPSAR (Apenas se não for forçado a abrir e estiver aberto)
-        conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
-        conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
-
-        // Adiciona classes de separação visual quando fechado
-        buscaTmdbWrapper.classList.add('pt-3', 'mt-3', 'border-t', 'border-suave');
-
-        iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
-        iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
-    }
+function colapsarBuscaTmdb() {
+    conteudoBuscaTmdbColapsavel.classList.remove('max-h-[700px]');
+    conteudoBuscaTmdbColapsavel.classList.add('max-h-0');
+    // Adiciona classes de separação visual quando fechado
+    buscaTmdbWrapper.classList.add('pt-3', 'mt-3', 'border-t', 'border-suave');
+    iconeToggleBuscaTmdb.classList.remove('fa-chevron-up');
+    iconeToggleBuscaTmdb.classList.add('fa-chevron-down');
 }
 
 function fecharModal() {
@@ -1048,7 +1042,14 @@ btnUltima.addEventListener('click', navegarUltimaPagina);
 btnAnterior.addEventListener('click', navegarPaginaAnterior);
 btnProximo.addEventListener('click', navegarPaginaProxima);
 
-btnToggleBuscaTmdb.addEventListener('click', alternarBuscaTmdbAcordeon);
+btnToggleBuscaTmdb.addEventListener('click', () => {
+    const isCollapsed = conteudoBuscaTmdbColapsavel.classList.contains('max-h-0');
+    if (isCollapsed) {
+        expandirBuscaTmdb();
+    } else {
+        colapsarBuscaTmdb();
+    }
+});
 
 inputTMDBBusca.addEventListener('input', (e) => {
     const tmdbId = parseInt(e.target.value.trim());
