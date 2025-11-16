@@ -58,7 +58,7 @@ const inputBuscaTitulo = document.getElementById('busca-titulo');
 const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
 const resultadosBuscaTitulo = document.getElementById('resultados-busca-titulo');
 const buscaIDMsg = document.getElementById('busca-id-msg');
-const contadorRegistros = document.getElementById('contador-registros');
+// const contadorRegistros = document.getElementById('contador-registros');
 const inputFiltroTitulo = document.getElementById('filtro-titulo');
 const inputFiltroAno = document.getElementById('filtro-ano');
 const selectFiltroCores = document.getElementById('filtro-cores');
@@ -398,7 +398,7 @@ formFilme.addEventListener('submit', async function (e) {
         console.error('Erro ao salvar no Supabase:', error);
         alert(`Erro ao salvar: ${error.message}. Verifique o RLS.`);
     } else {
-        await carregarFilmes(true);
+        await carregarFilmes(false);
         fecharModal();
     }
 });
@@ -507,28 +507,23 @@ function renderizarFilmes() {
     setTimeout(() => {
         gradeFilmes.innerHTML = '';
 
-        // ** 1. A FILTRAGEM JÁ FOI FEITA PELO SUPABASE. Apenas renderizamos 'filmes' **
         let listaFiltrada = [...filmes];
 
-        // Se o Supabase não encontrou nada (ex: Filtro errado), listaFiltrada.length será 0
         const totalFilmesRenderizados = listaFiltrada.length;
 
         if (totalFilmesRenderizados === 0) {
-            // Mensagem genérica, pois o Supabase já aplicou o filtro
             msgSemFilmes.textContent = `Nenhum filme encontrado na Página ${paginaAtual} para os filtros aplicados.`;
             msgSemFilmes.classList.remove('hidden');
 
         } else {
             msgSemFilmes.classList.add('hidden');
 
-            // Renderiza a lista (máx. FILMES_POR_PAGINA)
             listaFiltrada.forEach(filme => {
                 const card = criarCardFilme(filme);
                 gradeFilmes.appendChild(card);
             });
         }
 
-        // 2. ATUALIZA IU DE PAGINAÇÃO (Mantido)
         const totalPaginas = Math.ceil(totalRegistros / FILMES_POR_PAGINA);
         infoPaginacao.textContent = `Página ${paginaAtual} de ${totalPaginas} (${totalRegistros} total)`;
 
@@ -537,8 +532,7 @@ function renderizarFilmes() {
         btnPrimeira.disabled = paginaAtual === 1 || totalPaginas === 0;
         btnUltima.disabled = paginaAtual === totalPaginas || totalPaginas === 0;
 
-        // 3. ATUALIZA CONTADOR GERAL (Mantido)
-        contadorRegistros.textContent = `${totalRegistros.toString().padStart(2, '0')} Registros`;
+        // contadorRegistros.textContent = `${totalRegistros.toString().padStart(2, '0')} Registros`;
 
         loadingSpinner.classList.add('hidden');
         loadingSpinner.classList.remove('flex');
@@ -728,7 +722,7 @@ async function buscarFilmePorTitulo(titulo) {
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            data.results.slice(0, 5).forEach(filme => {
+            data.results.slice(0, 20).forEach(filme => {
 
                 // ** NOVIDADE: Gera o HTML da imagem do cartaz **
                 const posterPath = filme.poster_path;
