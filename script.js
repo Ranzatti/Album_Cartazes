@@ -31,7 +31,6 @@ const btnCancelar = document.getElementById('btn-cancelar');
 const formFilme = document.getElementById('form-filme');
 const gradeFilmes = document.getElementById('grade-filmes');
 const msgSemFilmes = document.getElementById('msg-sem-filmes');
-
 const inputID = document.getElementById('filme-id');
 const inputTMDBBusca = document.getElementById('tmdb-id-busca');
 const btnBuscarTMDBID = document.getElementById('btn-buscar-tmdb-id');
@@ -60,7 +59,6 @@ const resultadosBuscaTitulo = document.getElementById('resultados-busca-titulo')
 const buscaIDMsg = document.getElementById('busca-id-msg');
 // const contadorRegistros = document.getElementById('contador-registros');
 const inputFiltroTitulo = document.getElementById('filtro-titulo');
-const inputFiltroAno = document.getElementById('filtro-ano');
 const selectFiltroCores = document.getElementById('filtro-cores');
 const radioBuscaTMDBId = document.getElementById('radio-busca-tmdb-id');
 const radioBuscaTitulo = document.getElementById('radio-busca-titulo');
@@ -97,7 +95,6 @@ const iconeToggleBuscaTmdb = document.getElementById('icone-toggle-busca-tmdb');
 const buscaTmdbWrapper = document.getElementById('busca-tmdb-wrapper');
 
 const debouncedCarregarFilmes = debounce(carregarFilmes, 500);
-
 const debouncedBuscarFilmePorId = debounce(buscarFilmePorId, 800);   // 800ms para ID
 const debouncedBuscarFilmePorTitulo = debounce(buscarFilmePorTitulo, 800); // 800ms para Título
 
@@ -118,20 +115,35 @@ async function carregarFilmes(resetPagina = false) {
     const filtroCor = selectFiltroCores.value;
 
     let query = supabaseClient.from(SUPABASE_TABLE).select('*', {count: 'exact'});
+
+    // 1. FILTRO DE COR (se for selecionado)
     if (filtroCor && filtroCor.length > 0) {
         query = query.eq('cores', filtroCor);
-
     }
 
-    const termoBuscaAno = parseInt(inputFiltroAno.value.trim());
-    if (!isNaN(termoBuscaAno)) {
-        query = query.eq('ano', termoBuscaAno);
-    }
-
+    // 2. BUSCA UNIFICADA POR TÍTULO E ANO
     let termoBuscaTitulo = inputFiltroTitulo.value.trim().toLowerCase();
     termoBuscaTitulo = termoBuscaTitulo.replace(/[,"]/g, '');
+
+    // Tenta converter o termo de busca para um ano (4 dígitos)
+    const termoBuscaAno = parseInt(termoBuscaTitulo);
+    const isAnoValido = !isNaN(termoBuscaAno) && termoBuscaAno >= 1800 && termoBuscaAno <= 9999;
+
     if (termoBuscaTitulo.length > 0) {
-        const orFilter = `titulo_traduzido.ilike.%${termoBuscaTitulo}%,titulo_original.ilike.%${termoBuscaTitulo}%`;
+        let orFilters = [];
+
+        // A) Busca por Título (Original/Traduzido)
+        orFilters.push(`titulo_traduzido.ilike.%${termoBuscaTitulo}%`);
+        orFilters.push(`titulo_original.ilike.%${termoBuscaTitulo}%`);
+
+        // B) Busca por Ano (se o termo for um ano válido)
+        if (isAnoValido) {
+            // Usa .eq (equal) para busca exata por ano
+            orFilters.push(`ano.eq.${termoBuscaAno}`);
+        }
+
+        // Aplica o filtro OR na query do Supabase
+        const orFilter = orFilters.join(',');
         query = query.or(orFilter);
     }
 
@@ -143,11 +155,10 @@ async function carregarFilmes(resetPagina = false) {
         if (error) {
             console.error('Erro no carregamento:', error);
             alert(`Erro ao carregar dados: ${error.message}`);
-            // Se houver erro, garantimos que filmes seja vazio para não renderizar lixo
             totalRegistros = 0;
             filmes = [];
-            renderizarFilmes(); // Renderiza para mostrar tela vazia/mensagem de erro
-            return; // Sai da função carregarFilmes se houver erro
+            renderizarFilmes();
+            return;
         }
 
         totalRegistros = count || 0;
@@ -265,6 +276,8 @@ function preencherFormulario(filme) {
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+
+    cartazesAlternativosContainer.classList.remove('hidden');
 
     colapsarCartazes();
     colapsarBuscaTmdb();
@@ -1074,7 +1087,7 @@ document.addEventListener('keydown', function (e) {
 });
 
 inputFiltroTitulo.addEventListener('input', () => debouncedCarregarFilmes(true));
-inputFiltroAno.addEventListener('input', () => debouncedCarregarFilmes(true));
+// inputFiltroAno.addEventListener('input', () => debouncedCarregarFilmes(true));
 selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 
 /** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
