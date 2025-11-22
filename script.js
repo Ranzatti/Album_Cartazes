@@ -132,17 +132,13 @@ async function carregarFilmes(resetPagina = false) {
     if (termoBuscaTitulo.length > 0) {
         let orFilters = [];
 
-        // A) Busca por Título (Original/Traduzido)
         orFilters.push(`titulo_traduzido.ilike.%${termoBuscaTitulo}%`);
         orFilters.push(`titulo_original.ilike.%${termoBuscaTitulo}%`);
 
-        // B) Busca por Ano (se o termo for um ano válido)
         if (isAnoValido) {
-            // Usa .eq (equal) para busca exata por ano
             orFilters.push(`ano.eq.${termoBuscaAno}`);
         }
 
-        // Aplica o filtro OR na query do Supabase
         const orFilter = orFilters.join(',');
         query = query.or(orFilter);
     }
@@ -339,13 +335,13 @@ function alternarCartazesAcordeon() {
 
 function expandirCartazes() {
     conteudoCartazesColapsavel.classList.remove('max-h-0');
-    conteudoCartazesColapsavel.classList.add('max-h-[500px]', 'overflow-y-auto');
+    conteudoCartazesColapsavel.classList.add('max-h-[500px]', 'overflow-y-auto', 'border-t', 'pt-3', 'mt-3', 'border-suave');
     iconeToggleCartazes.classList.remove('fa-chevron-down');
     iconeToggleCartazes.classList.add('fa-chevron-up');
 }
 
 function colapsarCartazes() {
-    conteudoCartazesColapsavel.classList.remove('max-h-[500px]', 'overflow-y-auto');
+    conteudoCartazesColapsavel.classList.remove('max-h-[500px]', 'overflow-y-auto', 'border-t', 'pt-3', 'mt-3', 'border-suave');
     conteudoCartazesColapsavel.classList.add('max-h-0');
     iconeToggleCartazes.classList.remove('fa-chevron-up');
     iconeToggleCartazes.classList.add('fa-chevron-down');
@@ -629,7 +625,7 @@ async function buscarCartazes(tmdbId) {
 
             cartazesFinais.forEach(poster => {
                 const fullPath = poster.file_path;
-                const thumbUrl = `${BASE_THUMB_URL}${fullPath}`;
+                const thumbUrl = `https://image.tmdb.org/t/p/w342${fullPath}`;
                 const fullUrl = `${BASE_IMAGE_URL}${fullPath}`;
 
                 if (editandoId === null && !defaultPosterSet && (poster.iso_639_1 === 'en' || !poster.iso_639_1)) {
@@ -652,8 +648,13 @@ async function buscarCartazes(tmdbId) {
                 cartazesLista.appendChild(img);
             });
 
-            // Se nenhum cartaz EN/sem idioma foi encontrado (situação rara), o cartaz
-            // principal vindo de buscarFilmePorId será mantido.
+            if (editandoId === null && !defaultPosterSet && cartazesFinais.length > 0) {
+                const fallbackPoster = cartazesFinais[0];
+                const fullUrl = `${BASE_IMAGE_URL}${fallbackPoster.file_path}`;
+
+                inputLinkImagem.value = fullUrl;
+                posterPreview.src = fullUrl;
+            }
 
         } else {
             msgSemCartazes.textContent = 'Nenhum cartaz alternativo encontrado.';
@@ -701,8 +702,14 @@ async function buscarFilmePorId(tmdbId) {
 
         const posterPath = data.poster_path;
         const fullImageUrl = posterPath ? `${BASE_IMAGE_URL}${posterPath}` : '';
-        inputLinkImagem.value = fullImageUrl;
-        posterPreview.src = fullImageUrl || 'https://via.placeholder.com/500x750?text=Sem+Cartaz';
+
+        if (editandoId !== null) {
+            inputLinkImagem.value = fullImageUrl;
+            posterPreview.src = fullImageUrl || 'https://via.placeholder.com/500x750?text=Sem+Cartaz';
+        } else {
+            inputLinkImagem.value = '';
+            posterPreview.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+        }
 
         buscarCartazes(tmdbId);
 
