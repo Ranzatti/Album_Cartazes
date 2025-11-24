@@ -248,8 +248,9 @@
                         <div>
                             <label for="codigo-tmdb" class="block text-sm font-medium text-gray-700">TMDb <span class="text-danger">*</span></label>
                             <div class="input-icon-group mt-1">
-                                <input type="text" id="codigo-tmdb" required
-                                       class="focus:ring-principal focus:border-principal">
+                                <input type="text"
+                                       id="codigo-tmdb" required
+                                       class="focus:ring-principal focus:border-principal text-center">
                                 <a id="link-tmdb-modal" href="#" target="_blank"
                                    class="bg-principal text-white hover:bg-blue-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
                                    title="Ver filme no TMDb">
@@ -259,9 +260,12 @@
                         </div>
 
                         <div>
-                            <label for="codigo-imdb" class="block text-sm font-medium text-gray-700">IMDb</label>
+                            <label for="codigo-imdb"
+                                   class="block text-sm font-medium text-gray-700">IMDb</label>
                             <div class="input-icon-group mt-1">
-                                <input type="text" id="codigo-imdb" class="focus:ring-principal focus:border-principal">
+                                <input type="text"
+                                       id="codigo-imdb"
+                                       class="focus:ring-principal focus:border-principal text-center">
                                 <a id="link-imdb-modal" href="#" target="_blank"
                                    class="bg-yellow-500 text-white hover:bg-yellow-600 transition duration-300 disabled:opacity-50 disabled:pointer-events-none opacity-50 pointer-events-none"
                                    title="Ver filme no IMDb">
@@ -271,9 +275,11 @@
                         </div>
 
                         <div>
-                            <label for="data-release" class="block text-sm font-medium text-gray-700">Data Release</label>
-                            <input type="date" id="data-release"
-                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                            <label for="data-release"
+                                   class="block text-sm font-medium text-gray-700">Data Release</label>
+                            <input type="date"
+                                   id="data-release"
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-center">
                         </div>
                     </div>
 
@@ -294,19 +300,19 @@
                         <div>
                             <label for="ano" class="block text-sm font-medium text-gray-700">Ano</label>
                             <input type="number" id="ano"
-                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-center">
                         </div>
 
                         <div>
                             <label for="pasta" class="block text-sm font-medium text-gray-700">Pasta</label>
                             <input type="text" id="pasta"
-                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-center">
                         </div>
 
                         <div>
                             <label for="pagina" class="block text-sm font-medium text-gray-700">Página</label>
                             <input type="text" id="pagina"
-                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal">
+                                   class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal text-center">
                         </div>
 
                         <div class="col-span-2">
@@ -337,7 +343,8 @@
                 <div class="col-span-1 flex flex-col space-y-4">
                     <div>
                         <img id="poster-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
-                             alt="Pré-visualização do Cartaz" class="p-1 border border-suave rounded-lg w-full">
+                             alt="Pré-visualização do Cartaz" title="Clique para ampliar em nova aba"
+                             class="p-1 border border-suave rounded-lg w-full cursor-pointer hover:opacity-90 transition-opacity">
                     </div>
 
                 </div>
@@ -345,7 +352,7 @@
 
             <div>
                 <label for="sinopse" class="block text-sm font-medium text-gray-700">Sinopse</label>
-                <textarea id="sinopse" rows="11"
+                <textarea id="sinopse" rows="5"
                           class="mt-1 block w-full p-2 border border-suave rounded-lg focus:ring-principal focus:border-principal resize-none"></textarea>
             </div>
 

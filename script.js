@@ -438,14 +438,18 @@ function criarCardFilme(filme) {
     const placeholderText = 'SEM CARTAZ';
 
     const botoesAcaoHtml = isLoggedIn ? `
-    <div class="absolute inset-0 flex flex-col justify-end p-2 bg-black bg-opacity-40
+    <div class="absolute inset-0 flex flex-col justify-start items-end p-2 bg-black bg-opacity-40
                 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+        
         <div class="flex space-x-2">
-            <button class="flex-1 py-2 px-1 bg-edit/90 hover:bg-edit text-white font-semibold rounded-lg transition duration-300 btn-editar" data-id="${filme.id}">
-                <i class="fas fa-edit mr-1"></i> Editar
+            <button class="w-9 h-9 bg-edit hover:bg-green-600 text-white rounded-lg transition duration-300 btn-editar flex items-center justify-center shadow-lg" 
+                    data-id="${filme.id}" title="Editar">
+                <i class="fas fa-edit"></i>
             </button>
-            <button class="flex-1 py-2 px-1 bg-danger/90 hover:bg-danger text-white font-semibold rounded-lg transition duration-300 btn-excluir" data-id="${filme.id}">
-                <i class="fas fa-trash-alt mr-1"></i> Excluir
+            
+            <button class="w-9 h-9 bg-danger hover:bg-red-600 text-white rounded-lg transition duration-300 btn-excluir flex items-center justify-center shadow-lg" 
+                    data-id="${filme.id}" title="Excluir">
+                <i class="fas fa-trash-alt"></i>
             </button>
         </div>
     </div>
@@ -460,13 +464,13 @@ function criarCardFilme(filme) {
     ` : '';
 
     card.innerHTML = `
-        <div class="poster-area">
+        <div class="poster-area w-full aspect-[2/3] relative">
             ${imageUrl ?
         `<img src="${imageUrl}"
                       alt="${filme.titulo_traduzido} Cartaz"
-                      class="card-poster">`
+                      class="w-full h-full object-cover block rounded-t-lg">`
         :
-        `<div class="card-poster flex items-center justify-center text-xl font-bold text-texto-suave bg-[#f3f4f6] p-2">
+        `<div class="w-full h-full flex items-center justify-center text-xl font-bold text-texto-suave bg-[#f3f4f6] rounded-t-lg">
                          ${placeholderText}
                      </div>`
     }
@@ -1074,27 +1078,17 @@ inputBuscaTitulo.addEventListener('input', (e) => {
     }
 });
 
-// btnBuscarTMDBID.addEventListener('click', () => {
-//     const tmdbId = parseInt(inputTMDBBusca.value.trim());
-//     if (tmdbId) {
-//         buscarFilmePorId(tmdbId);
-//     }
-// });
-//
-// btnBuscarTitulo.addEventListener('click', () => {
-//     const titulo = inputBuscaTitulo.value.trim();
-//     if (titulo) {
-//         buscarFilmePorTitulo(titulo);
-//     }
-// });
+posterPreview.addEventListener('click', function() {
+    if (this.src && !this.src.includes('data:image/gif')) {
+        window.open(this.src, '_blank');
+    }
+});
 
 inputCodigoTMDB.addEventListener('input', atualizarLinkTMDB);
 inputCodigoIMDB.addEventListener('input', atualizarLinkIMDB);
 
 document.addEventListener('keydown', function (e) {
-    // Verifica se a tecla pressionada é 'Escape' (ou keyCode 27)
     if (e.key === 'Escape') {
-        // Verifica se o modal está visível (se não tem a classe 'hidden')
         if (!modal.classList.contains('hidden')) {
             fecharModal(); // Chama a função que fecha o modal
         }
@@ -1102,7 +1096,6 @@ document.addEventListener('keydown', function (e) {
 });
 
 inputFiltroTitulo.addEventListener('input', () => debouncedCarregarFilmes(true));
-// inputFiltroAno.addEventListener('input', () => debouncedCarregarFilmes(true));
 selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 
 /** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
