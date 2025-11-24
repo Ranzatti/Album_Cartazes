@@ -14,7 +14,7 @@ const TMDB_API_KEY = '2b0120b7e901bbe70b631b2273fe28c9';
 const BASE_IMAGE_URL = 'https://image.tmdb.org/t/p/w500';
 const BASE_THUMB_URL = 'https://image.tmdb.org/t/p/w92';
 
-const FILMES_POR_PAGINA = 100;
+const FILMES_POR_PAGINA = 102;
 
 let filmes = [];
 let editandoId = null;
@@ -742,6 +742,14 @@ async function buscarFilmePorTitulo(titulo) {
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
+
+            if (data.results.length === 1) {
+                buscarFilmePorId(data.results[0].id);
+                resultadosBuscaTitulo.innerHTML = '';
+                inputBuscaTitulo.value = ''; // Limpa o campo de busca
+                return; // Encerra a função aqui, não precisa desenhar a lista
+            }
+
             data.results.slice(0, 20).forEach(filme => {
 
                 // ** NOVIDADE: Gera o HTML da imagem do cartaz **
