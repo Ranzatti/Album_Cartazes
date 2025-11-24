@@ -457,9 +457,9 @@ function criarCardFilme(filme) {
 
     const infoLocalizacaoHtml = isLoggedIn ? `
         <p class="text-xs text-texto-suave truncate">
-            ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
-            ${(filme.pagina && filme.pasta) ? ` | ` : ''}
             ${filme.pasta ? `Pasta: ${filme.pasta}` : ''}
+            ${(filme.pagina && filme.pasta) ? ` | ` : ''}
+            ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
         </p>
     ` : '';
 
