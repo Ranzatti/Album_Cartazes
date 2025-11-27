@@ -6,12 +6,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SUPABASE_TABLE = 'album';
 
 // ** 2. INICIALIZAÇÃO SUPABASE **
-// const {createClient} = supabase;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- Variáveis TMDb ---
 const TMDB_API_KEY = '2b0120b7e901bbe70b631b2273fe28c9';
-const BASE_IMAGE_URL = 'https://image.tmdb.org/t/p/w500';
+const BASE_IMAGE_URL = 'https://image.tmdb.org/t/p/w300';
 const BASE_THUMB_URL = 'https://image.tmdb.org/t/p/w92';
 
 const FILMES_POR_PAGINA = 102;
@@ -1069,10 +1068,9 @@ inputTMDBBusca.addEventListener('input', (e) => {
 
 inputBuscaTitulo.addEventListener('input', (e) => {
     const titulo = e.target.value.trim();
-    if (titulo.length > 2) { // Adiciona um limite mínimo para evitar buscas excessivas
+    if (titulo.length > 2) {
         debouncedBuscarFilmePorTitulo(titulo);
     }
-    // Opcional: Limpar resultados se o campo estiver vazio
     if (titulo.length === 0) {
         resultadosBuscaTitulo.innerHTML = '';
     }
@@ -1080,7 +1078,13 @@ inputBuscaTitulo.addEventListener('input', (e) => {
 
 posterPreview.addEventListener('click', function() {
     if (this.src && !this.src.includes('data:image/gif')) {
-        window.open(this.src, '_blank');
+        let currentSrc = this.src;
+
+        if (currentSrc.includes('/w300/')) {
+            currentSrc = currentSrc.replace('/w300/', '/original/');
+        }
+
+        window.open(currentSrc, '_blank');
     }
 });
 
@@ -1090,7 +1094,7 @@ inputCodigoIMDB.addEventListener('input', atualizarLinkIMDB);
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         if (!modal.classList.contains('hidden')) {
-            fecharModal(); // Chama a função que fecha o modal
+            fecharModal();
         }
     }
 });
@@ -1101,9 +1105,9 @@ selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 /** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
 function getIntOrNull(inputValue) {
     const value = inputValue.trim();
-    if (!value) return null; // Retorna null se estiver vazio
+    if (!value) return null;
     const num = parseInt(value);
-    return isNaN(num) ? null : num; // Retorna o número ou null se for inválido
+    return isNaN(num) ? null : num;
 }
 
 radioBuscaTMDBId.addEventListener('change', () => alternarBusca('id'));
