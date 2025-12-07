@@ -22,6 +22,8 @@ let totalRegistros = 0;
 let isLoggedIn = false;
 
 // --- REFERÊNCIAS DE ELEMENTOS DOM ---
+const inputPassword = document.getElementById('password');
+const togglePassword = document.getElementById('togglePassword');
 const modal = document.getElementById('modal-filme');
 const modalTitulo = document.getElementById('modal-titulo');
 const btnNovoFilme = document.getElementById('btn-novo-filme');
@@ -56,7 +58,6 @@ const inputBuscaTitulo = document.getElementById('busca-titulo');
 const btnBuscarTitulo = document.getElementById('btn-buscar-titulo');
 const resultadosBuscaTitulo = document.getElementById('resultados-busca-titulo');
 const buscaIDMsg = document.getElementById('busca-id-msg');
-// const contadorRegistros = document.getElementById('contador-registros');
 const inputFiltroTitulo = document.getElementById('filtro-titulo');
 const selectFiltroCores = document.getElementById('filtro-cores');
 const radioBuscaTMDBId = document.getElementById('radio-busca-tmdb-id');
@@ -80,7 +81,7 @@ const modalLogin = document.getElementById('modal-login');
 const btnFecharLogin = document.getElementById('btn-fechar-login');
 const formLogin = document.getElementById('form-login');
 const inputLoginNome = document.getElementById('input-login-nome');
-const inputLoginSenha = document.getElementById('input-login-senha');
+// const inputLoginSenha = document.getElementById('input-login-senha');
 const mensagemLogin = document.getElementById('mensagem-login');
 const btnToggleBusca = document.getElementById('btn-toggle-busca');
 const conteudoBuscaColapsavel = document.getElementById('conteudo-busca-colapsavel');
@@ -93,9 +94,16 @@ const conteudoBuscaTmdbColapsavel = document.getElementById('conteudo-busca-tmdb
 const iconeToggleBuscaTmdb = document.getElementById('icone-toggle-busca-tmdb');
 const buscaTmdbWrapper = document.getElementById('busca-tmdb-wrapper');
 
+const btnBackupSQL = document.getElementById('btn-backup-sql');
+const modalMessage = document.getElementById('modal-message');
+const messageText = document.getElementById('message-text');
+const messageIcon = document.getElementById('message-icon');
+const btnMessageConfirm = document.getElementById('btn-message-confirm');
+const btnMessageCancel = document.getElementById('btn-message-cancel');
+
 const debouncedCarregarFilmes = debounce(carregarFilmes, 500);
-const debouncedBuscarFilmePorId = debounce(buscarFilmePorId, 800);   // 800ms para ID
-const debouncedBuscarFilmePorTitulo = debounce(buscarFilmePorTitulo, 800); // 800ms para Título
+const debouncedBuscarFilmePorId = debounce(buscarFilmePorId, 800);
+const debouncedBuscarFilmePorTitulo = debounce(buscarFilmePorTitulo, 800);
 
 // --- FUNÇÕES DE PERSISTÊNCIA (SUPABASE) ---
 async function carregarFilmes(resetPagina = false) {
@@ -149,7 +157,7 @@ async function carregarFilmes(resetPagina = false) {
 
         if (error) {
             console.error('Erro no carregamento:', error);
-            alert(`Erro ao carregar dados: ${error.message}`);
+            exibirMensagem(`Erro ao carregar dados: ${error.message}`, 'error');
             totalRegistros = 0;
             filmes = [];
             renderizarFilmes();
@@ -163,7 +171,7 @@ async function carregarFilmes(resetPagina = false) {
 
     } catch (e) {
         console.error('Erro no carregamento:', e);
-        alert(`Erro ao carregar dados: ${e.message}`);
+        exibirMensagem(`Erro ao carregar dados: ${error.message}`, 'error');
     } finally {
         loadingSpinner.classList.add('hidden');
         loadingSpinner.classList.remove('flex');
@@ -199,7 +207,7 @@ function navegarUltimaPagina() {
     const totalPaginas = Math.ceil(totalRegistros / FILMES_POR_PAGINA);
     if (paginaAtual !== totalPaginas) {
         paginaAtual = totalPaginas;
-        carregarFilmes(false); // Mantém o filtro, mas muda a página
+        carregarFilmes(false);
         window.scrollTo(0, 0);
     }
 }
@@ -281,7 +289,12 @@ function preencherFormulario(filme) {
         modalContentContainer.scrollTop = 0;
     }
 
-    buscarCartazes(filme.tmdb);
+    if (filme.tmdb) {
+        buscarCartazes(filme.tmdb);
+    } else {
+        cartazesLista.innerHTML = '<p class="text-sm text-texto-suave">Não foi possível buscar cartazes alternativos, pois o campo TMDb está vazio.</p>';
+        msgSemCartazes.classList.add('hidden');
+    }
 
     atualizarLinkTMDB();
     atualizarLinkIMDB();
@@ -310,6 +323,9 @@ function abrirModalNovo() {
     colapsarCartazes();
     expandirBuscaTmdb();
     alternarBusca('titulo');
+
+    cartazesLista.innerHTML = '<p class="text-sm text-texto-suave" id="msg-sem-cartazes">Carregando cartazes...</p>';
+    msgSemCartazes.classList.remove('hidden');
 
     if (modalContentContainer) {
         modalContentContainer.scrollTop = 0;
@@ -404,7 +420,7 @@ formFilme.addEventListener('submit', async function (e) {
 
     if (error) {
         console.error('Erro ao salvar no Supabase:', error);
-        alert(`Erro ao salvar: ${error.message}. Verifique o RLS.`);
+        exibirMensagem(`Erro ao salvar: ${error.message}. Verifique o RLS.`, 'error');
     } else {
         await carregarFilmes(false);
         fecharModal();
@@ -569,19 +585,28 @@ async function excluirFilme(id) {
     const filme = filmes.find(f => f.id === id);
     const tituloParaExcluir = filme ? filme.titulo_traduzido : `ID ${id}`;
 
-    if (confirm(`Tem certeza que deseja excluir o filme "${tituloParaExcluir}"?`)) {
-        const {error} = await supabaseClient
-            .from(SUPABASE_TABLE)
-            .delete()
-            .eq('id', id);
+    // 1. Usa a modal customizada (exibirMensagem) no modo 'confirm'
+    exibirMensagem(
+        `Tem certeza que deseja excluir o filme "${tituloParaExcluir}"?`,
+        'confirm',
+        async () => {
+            // 2. Este bloco de código será executado SE o usuário clicar em "Confirmar"
+            const {error} = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .delete()
+                .eq('id', id);
 
-        if (error) {
-            console.error('Erro ao excluir:', error);
-            alert(`Erro ao excluir: ${error.message}`);
-        } else {
-            await carregarFilmes(true);
+            if (error) {
+                console.error('Erro ao excluir:', error);
+                // Exibe erro na modal customizada, se necessário
+                exibirMensagem(`Erro ao excluir: ${error.message}`, 'error');
+            } else {
+                // Recarrega os filmes após a exclusão
+                await carregarFilmes(false);
+            }
         }
-    }
+    );
+    // Removemos o 'if (confirm(...))'
 }
 
 // --- FUNÇÕES DE BUSCA (API TMDb) ---
@@ -796,20 +821,45 @@ async function buscarFilmePorTitulo(titulo) {
 
 /***************************************************/
 /************* FUNÇÕES DE AUTH E ADMIN UI **********/
-
 /***************************************************/
 
 function atualizarUIAdmin(logado) {
     isLoggedIn = logado;
+    const loginIcon = btnLogin.querySelector('i'); // Tenta selecionar o ícone
 
+    // *** NOVO: Verifica se o ícone foi encontrado antes de manipulá-lo ***
+    if (loginIcon) {
+        if (logado) {
+            // Lógica para LOGOUT
+            loginIcon.classList.remove('fa-sign-in-alt');
+            loginIcon.classList.add('fa-sign-out-alt');
+            loginIcon.classList.remove('mr-2'); // Remove margem se ainda existir
+
+        } else {
+            // Lógica para LOGIN
+            loginIcon.classList.remove('fa-sign-out-alt');
+            loginIcon.classList.add('fa-sign-in-alt');
+            loginIcon.classList.remove('mr-2'); // Remove margem se ainda existir
+        }
+    } else {
+        // Opcional: Ajuda a debugar se o ícone for perdido
+        console.error("Ícone de Login (<i>) não encontrado dentro do botão #btn-login.");
+    }
+
+    // O restante do código, que lida com outros botões, permanece inalterado:
     if (logado) {
         btnNovoFilme.classList.remove('hidden');
-        btnLogin.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i> LOGOUT';
+        btnBackupSQL.classList.remove('hidden');
+        btnBackupSQL.disabled = false;
+
         btnLogin.classList.remove('bg-texto-suave');
         btnLogin.classList.add('bg-danger');
+
     } else {
         btnNovoFilme.classList.add('hidden');
-        btnLogin.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Login';
+        btnBackupSQL.classList.add('hidden');
+        btnBackupSQL.disabled = true;
+
         btnLogin.classList.remove('bg-danger');
         btnLogin.classList.add('bg-texto-suave');
     }
@@ -821,7 +871,7 @@ async function fazerLogin(e) {
     e.preventDefault();
 
     const email = inputLoginNome.value.trim();
-    const password = inputLoginSenha.value.trim();
+    const password = inputPassword.value.trim();
     mensagemLogin.classList.add('hidden');
 
     if (!email || !password) return;
@@ -848,7 +898,6 @@ async function fazerLogin(e) {
 async function fazerLogout() {
     await supabaseClient.auth.signOut();
     atualizarUIAdmin(false);
-    // exibirToast('Logout realizado com sucesso!', 'bg-principal'); // COMENTADO: exibirToast não existe no código
     carregarFilmes(true);
 }
 
@@ -990,7 +1039,7 @@ async function abrirModalGrafico() {
 
     if (error) {
         console.error('Erro ao buscar dados para o gráfico:', error);
-        alert('Erro ao carregar todos os dados para o gráfico.');
+        exibirMensagem('Erro ao carregar todos os dados para o gráfico.', 'error');
         return;
     }
 
@@ -1024,6 +1073,186 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(context, args), wait);
     };
+}
+
+// --- FUNÇÕES DO MODAL DE MENSAGEM/CONFIRMAÇÃO (CUSTOMIZADO) ---
+
+/** Exibe a modal de mensagem (substitui alert() e confirm()). */
+function exibirMensagem(texto, tipo = 'info', onConfirm = null) {
+    messageText.textContent = texto;
+    btnMessageConfirm.classList.add('hidden');
+    btnMessageCancel.textContent = 'OK';
+
+    // Resetar classes do ícone
+    messageIcon.className = '';
+    messageIcon.classList.add('fas', 'text-4xl', 'mb-4');
+
+    if (tipo === 'confirm' && onConfirm) {
+        // Modo Confirmação
+        messageIcon.classList.add('fa-question-circle', 'text-orange-500');
+        btnMessageConfirm.classList.remove('hidden');
+        btnMessageCancel.textContent = 'Cancelar';
+
+        // Remove listeners anteriores
+        btnMessageConfirm.replaceWith(btnMessageConfirm.cloneNode(true));
+        btnMessageCancel.replaceWith(btnMessageCancel.cloneNode(true));
+
+        const newBtnConfirm = document.getElementById('btn-message-confirm');
+        const newBtnCancel = document.getElementById('btn-message-cancel');
+
+        newBtnConfirm.addEventListener('click', () => {
+            modalMessage.classList.add('hidden');
+            onConfirm();
+        }, { once: true });
+
+        newBtnCancel.addEventListener('click', () => {
+            modalMessage.classList.add('hidden');
+        }, { once: true });
+
+    } else {
+        if (tipo === 'error') {
+            messageIcon.classList.add('fa-exclamation-triangle', 'text-danger');
+        } else {
+            messageIcon.classList.add('fa-info-circle', 'text-principal');
+        }
+
+        // Remove listeners anteriores e recria
+        btnMessageCancel.replaceWith(btnMessageCancel.cloneNode(true));
+        document.getElementById('btn-message-cancel').addEventListener('click', () => {
+            modalMessage.classList.add('hidden');
+        }, { once: true });
+    }
+
+    modalMessage.classList.remove('hidden');
+    modalMessage.classList.add('flex');
+}
+
+// --- FUNÇÕES DE BACKUP SQL (NOVO) ---
+
+/**
+ * Escapa strings para uso em comandos SQL INSERT (substitui ' por '').
+ * @param {string | null} value - O valor a ser escapado.
+ * @returns {string} O valor formatado para SQL (ex: 'Valor escapado' ou NULL).
+ */
+function formatarValorSQL(value) {
+    if (value === null || typeof value === 'undefined') {
+        return 'NULL';
+    }
+    // Para strings, escapa as aspas simples e coloca a string entre aspas simples
+    if (typeof value === 'string') {
+        return `'${value.replace(/'/g, "''")}'`;
+    }
+    // Para números e booleanos, retorna o valor diretamente (o Supabase lida com números)
+    return String(value);
+}
+
+/**
+ * Gera e baixa um arquivo SQL contendo comandos INSERT para todos os registros.
+ */
+async function gerarBackupSQL() {
+    if (!isLoggedIn) {
+        exibirMensagem('Você precisa estar logado para gerar o backup SQL.', 'error');
+        return;
+    }
+
+    // 1. Confirmação do usuário
+    exibirMensagem('Deseja gerar o backup completo da tabela? Isso pode levar alguns segundos.', 'confirm', async () => {
+
+        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.classList.add('flex');
+
+        try {
+            // 2. Busca todos os dados da tabela, sem limites/paginação, ordenado por ID.
+            const { data, error } = await supabaseClient
+                .from(SUPABASE_TABLE)
+                .select('tmdb, imdb, titulo_original, titulo_traduzido, ano, pagina, pasta, data_release, link_imagem, sinopse, cores')
+                .order('id', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao buscar dados para backup:', error);
+                exibirMensagem(`Erro ao buscar dados para backup: ${error.message}`, 'error');
+                return;
+            }
+
+            const filmesParaBackup = data || [];
+            if (filmesParaBackup.length === 0) {
+                exibirMensagem('Nenhum registro encontrado para gerar o backup.', 'info');
+                return;
+            }
+
+            // 3. Define as colunas para o comando INSERT
+            const colunas = [
+                'tmdb', 'imdb', 'titulo_original', 'titulo_traduzido', 'ano', 'pagina',
+                'pasta', 'data_release', 'link_imagem', 'sinopse', 'cores'
+            ];
+
+            const nomeTabela = SUPABASE_TABLE; // Usando o nome da tabela original: 'album'
+
+            let sqlContent = `
+-- Backup SQL gerado em: ${new Date().toISOString()}
+-- Tabela: ${nomeTabela} (${filmesParaBackup.length} registros)
+-- Colunas: ${colunas.join(', ')}
+
+-- ATENÇÃO: Se for restaurar em um banco com dados existentes, considere apagar o conteúdo antes:
+-- DELETE FROM "${nomeTabela}";
+-- Caso queira reiniciar a contagem do ID:
+-- ALTER SEQUENCE "public"."${nomeTabela}_id_seq" RESTART WITH 1; 
+
+INSERT INTO "${nomeTabela}" (${colunas.map(c => `"${c}"`).join(',')}) VALUES
+`;
+
+            const recordsPerInsert = 10; // 10 registros por comando VALUES
+            let valuesGroup = [];
+
+            filmesParaBackup.forEach((filme, index) => {
+                const values = colunas.map(col => formatarValorSQL(filme[col]));
+                const valuesString = `\t(${values.join(',')})`;
+
+                valuesGroup.push(valuesString);
+
+                // Se atingiu o limite ou é o último registro
+                if (valuesGroup.length === recordsPerInsert || index === filmesParaBackup.length - 1) {
+                    sqlContent += valuesGroup.join(',\n') + ';\n';
+
+                    // Adiciona um novo cabeçalho INSERT se não for o último comando
+                    if (index !== filmesParaBackup.length - 1) {
+                        sqlContent += `
+INSERT INTO "${nomeTabela}" (${colunas.map(c => `"${c}"`).join(',')}) VALUES
+`;
+                    }
+                    valuesGroup = [];
+                }
+            });
+
+            // 4. Cria o Blob e o Link de Download
+            const dataAtual = new Date();
+            // Formato DD-MM-YYYY
+            const dataFormatada = `${dataAtual.getDate().toString().padStart(2, '0')}-${(dataAtual.getMonth() + 1).toString().padStart(2, '0')}-${dataAtual.getFullYear()}`;
+            const nomeArquivo = `ALBUM - backup - ${dataFormatada}.sql`;
+
+            const blob = new Blob([sqlContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+
+            // Simula o clique para iniciar o download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // exibirMensagem(`Backup "${nomeArquivo}" gerado e baixado com sucesso!`, 'info');
+
+        } catch (e) {
+            console.error('Erro fatal ao gerar backup:', e);
+            exibirMensagem(`Erro fatal ao gerar backup: ${e.message}`, 'error');
+        } finally {
+            loadingSpinner.classList.add('hidden');
+            loadingSpinner.classList.remove('flex');
+        }
+    });
 }
 
 /***************************************************/
@@ -1135,6 +1364,26 @@ btnLogin.addEventListener('click', () => {
 
 btnFecharLogin.addEventListener('click', fecharModalLogin);
 formLogin.addEventListener('submit', fazerLogin);
+
+btnBackupSQL.addEventListener('click', gerarBackupSQL);
+
+window.onload = function () {
+    checkInitialSession();
+    carregarFilmes(true);
+    alternarBusca('titulo');
+};
+
+if (togglePassword && inputPassword) {
+    togglePassword.addEventListener('click', function () {
+        // 1. Alterna o atributo 'type' entre 'password' e 'text'
+        const type = inputPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+        inputPassword.setAttribute('type', type);
+
+        // 2. Alterna o ícone (olho aberto / olho fechado)
+        this.classList.toggle('fa-eye');
+        this.classList.toggle('fa-eye-slash');
+    });
+}
 
 window.onload = function () {
     checkInitialSession();
