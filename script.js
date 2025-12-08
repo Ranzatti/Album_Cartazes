@@ -171,7 +171,7 @@ async function carregarFilmes(resetPagina = false) {
 
     } catch (e) {
         console.error('Erro no carregamento:', e);
-        exibirMensagem(`Erro ao carregar dados: ${error.message}`, 'error');
+        exibirMensagem(`Erro ao carregar dados: ${e.message}`, 'error');
     } finally {
         loadingSpinner.classList.add('hidden');
         loadingSpinner.classList.remove('flex');
@@ -1331,7 +1331,6 @@ document.addEventListener('keydown', function (e) {
 inputFiltroTitulo.addEventListener('input', () => debouncedCarregarFilmes(true));
 selectFiltroCores.addEventListener('change', () => carregarFilmes(true));
 
-/** Converte um valor de input para inteiro, retornando null se o campo estiver vazio ou for NaN. */
 function getIntOrNull(inputValue) {
     const value = inputValue.trim();
     if (!value) return null;
@@ -1367,12 +1366,6 @@ formLogin.addEventListener('submit', fazerLogin);
 
 btnBackupSQL.addEventListener('click', gerarBackupSQL);
 
-window.onload = function () {
-    checkInitialSession();
-    carregarFilmes(true);
-    alternarBusca('titulo');
-};
-
 if (togglePassword && inputPassword) {
     togglePassword.addEventListener('click', function () {
         // 1. Alterna o atributo 'type' entre 'password' e 'text'
@@ -1385,8 +1378,8 @@ if (togglePassword && inputPassword) {
     });
 }
 
-window.onload = function () {
-    checkInitialSession();
-    carregarFilmes(true);
+window.onload = async function () {
+    await checkInitialSession();
+    await carregarFilmes(true);
     alternarBusca('titulo');
 };
