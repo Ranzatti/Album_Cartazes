@@ -446,7 +446,7 @@ function alternarBuscaPrincipal() {
 // --- FUNÇÕES DE RENDERIZAÇÃO E ORDENAÇÃO ---
 function criarCardFilme(filme) {
     const card = document.createElement('div');
-    card.className = 'group bg-white rounded-lg shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-suave';
+    card.className = 'group bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition duration-300 overflow-hidden border border-suave';
     card.setAttribute('data-id', filme.id);
 
     const imageUrl = filme.link_imagem || '';
@@ -471,7 +471,7 @@ function criarCardFilme(filme) {
 ` : '';
 
     const infoLocalizacaoHtml = isLoggedIn ? `
-        <p class="text-xs text-texto-suave truncate">
+        <p class="text-xs text-gray-400 truncate">
             ${filme.pasta ? `Pasta: ${filme.pasta}` : ''}
             ${(filme.pagina && filme.pasta) ? ` | ` : ''}
             ${filme.pagina ? `Pág: ${filme.pagina}` : ''}
@@ -485,7 +485,7 @@ function criarCardFilme(filme) {
                       alt="${filme.titulo_traduzido} Cartaz"
                       class="w-full h-full object-cover block rounded-t-lg">`
         :
-        `<div class="w-full h-full flex items-center justify-center text-xl font-bold text-texto-suave bg-[#f3f4f6] rounded-t-lg">
+        `<div class="w-full h-full flex items-center justify-center text-xl font-bold text-gray-400 bg-gray-700 rounded-t-lg">
                          ${placeholderText}
                      </div>`
     }
@@ -494,9 +494,9 @@ function criarCardFilme(filme) {
         </div>
 
         <div class="p-3 text-center">
-            <h3 class="text-sm font-bold text-gray-800 truncate input-uppercase" title="${filme.titulo_traduzido}">${filme.titulo_traduzido}</h3>
+            <h3 class="text-sm font-bold text-white truncate input-uppercase" title="${filme.titulo_traduzido}">${filme.titulo_traduzido}</h3>
 
-            ${filme.titulo_original ? `<p class="text-xs text-texto-suave truncate italic mt-[-2px] mb-1 input-uppercase" title="Título Original">${filme.titulo_original}</p>` : ''}
+            ${filme.titulo_original ? `<p class="text-xs text-gray-400 truncate italic mt-[-2px] mb-1 input-uppercase" title="${filme.titulo_original}">${filme.titulo_original}</p>` : ''}
 
             <p class="text-xs text-texto-suave flex justify-center items-center space-x-2">
                 ${filme.tmdb ? `
@@ -514,7 +514,7 @@ function criarCardFilme(filme) {
             
             ${infoLocalizacaoHtml}
             
-            <p class="text-xs font-semibold mt-1 text-texto-suave">
+            <p class="text-xs font-semibold mt-1 text-gray-400">
                 <span>${filme.ano}</span>
                 <span class="ml-1">
                     | ${filme.cores || 'Cores'}
