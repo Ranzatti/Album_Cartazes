@@ -20,6 +20,7 @@ let editandoId = null;
 let paginaAtual = 1;
 let totalRegistros = 0;
 let isLoggedIn = false;
+let paisDetectado = null;
 
 // --- REFERÊNCIAS DE ELEMENTOS DOM ---
 const inputPassword = document.getElementById('password');
@@ -248,40 +249,46 @@ function alternarBusca(modo) {
 
 function preencherFormulario(filme) {
     editandoId = filme.id;
+    paisDetectado = filme.pais;
     inputTMDBBusca.value = '';
-    modalTitulo.textContent = `Editar Filme (ID: ${filme.id})`;
+
+    const textoTitulo = document.getElementById('texto-titulo-modal');
+    if (textoTitulo) {
+        textoTitulo.textContent = `Editar Filme (ID: ${filme.id})`;
+    }
 
     inputID.value = filme.id;
+
     inputTituloTraduzido.value = filme.titulo_traduzido || '';
     inputAno.value = filme.ano;
     inputCodigoTMDB.value = filme.tmdb;
     inputCodigoIMDB.value = filme.imdb || '';
-
     if (filme.cores === 'Preto Branco') {
+
         radioPB.checked = true;
         radioCores.checked = false;
     } else {
         radioCores.checked = true;
         radioPB.checked = false;
     }
-
     inputPagina.value = filme.pagina || '';
+
     inputPasta.value = filme.pasta || '';
     inputLinkImagem.value = filme.link_imagem || '';
     inputDataRelease.value = filme.data_release || '';
     inputTituloOriginal.value = filme.titulo_original || '';
     inputSinopse.value = filme.sinopse || '';
     posterPreview.src = filme.link_imagem || 'data:image:gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-
     inputTMDBBusca.value = filme.tmdb;
+
     resultadosBuscaTitulo.innerHTML = '';
     buscaIDMsg.classList.add('hidden');
-
     modal.classList.remove('hidden');
-    modal.classList.add('flex');
 
+    modal.classList.add('flex');
     cartazesAlternativosContainer.classList.remove('hidden');
 
+    atualizarBandeiraModal(paisDetectado);
     colapsarCartazes();
     colapsarBuscaTmdb();
 
@@ -310,7 +317,18 @@ function abrirModalEdicao(id) {
 
 function abrirModalNovo() {
     editandoId = null;
-    modalTitulo.textContent = 'Adicionar Novo Filme';
+    paisDetectado = null;
+
+    // LIMPEZA DO TÍTULO E BANDEIRA (Item 4)
+    const textoTitulo = document.getElementById('texto-titulo-modal');
+    if (textoTitulo) {
+        textoTitulo.textContent = 'Adicionar Novo Filme';
+    }
+
+    // Limpa a bandeira do modal
+    atualizarBandeiraModal(null);
+
+    // modalTitulo.textContent = 'Adicionar Novo Filme';
     formFilme.reset();
     inputTMDBBusca.value = '';
     radioCores.checked = true;
@@ -319,8 +337,8 @@ function abrirModalNovo() {
     buscaIDMsg.classList.add('hidden');
     cartazesAlternativosContainer.classList.add('hidden');
     modal.classList.remove('hidden');
-
     colapsarCartazes();
+
     expandirBuscaTmdb();
     alternarBusca('titulo');
 
@@ -400,6 +418,7 @@ formFilme.addEventListener('submit', async function (e) {
         link_imagem: inputLinkImagem.value.trim() || null,
         sinopse: inputSinopse.value.trim() || null,
         cores: tipoCorSelecionado ? tipoCorSelecionado.value : 'Cores',
+        pais: paisDetectado
     };
 
     let error;
@@ -451,6 +470,13 @@ function criarCardFilme(filme) {
 
     const imageUrl = filme.link_imagem || '';
     const placeholderText = 'SEM CARTAZ';
+
+    const bandeiraHTML = filme.pais
+        ? `<img src="https://flagcdn.com/w40/${filme.pais.toLowerCase()}.png" 
+                class="w-5 h-auto inline-block ml-1 rounded-sm shadow-sm" 
+                title="País: ${filme.pais}" 
+                alt="${filme.pais}">`
+        : '';
 
     const botoesAcaoHtml = isLoggedIn ? `
     <div class="absolute inset-0 flex flex-col justify-start items-end p-2 bg-black bg-opacity-40
@@ -510,6 +536,8 @@ function criarCardFilme(filme) {
                         <i class="fab fa-imdb mr-1 text-yellow-500"></i> IMDB
                     </a>
                 ` : ''}
+                
+                ${bandeiraHTML}
             </p>
             
             ${infoLocalizacaoHtml}
@@ -710,6 +738,11 @@ async function buscarFilmePorId(tmdbId) {
         if (!response.ok) throw new Error('Filme não encontrado ou erro na API.');
 
         const data = await response.json();
+
+        paisDetectado = data.production_countries && data.production_countries.length > 0
+            ? data.production_countries[0].iso_3166_1
+            : null;
+        atualizarBandeiraModal(paisDetectado);
 
         // Preenche os campos
         inputCodigoTMDB.value = data.id;
@@ -1155,104 +1188,94 @@ async function gerarBackupSQL() {
         return;
     }
 
-    // 1. Confirmação do usuário
-    exibirMensagem('Deseja gerar o backup completo da tabela? Isso pode levar alguns segundos.', 'confirm', async () => {
-
+    exibirMensagem('Deseja gerar o backup completo?', 'confirm', async () => {
         loadingSpinner.classList.remove('hidden');
         loadingSpinner.classList.add('flex');
 
         try {
-            // 2. Busca todos os dados da tabela, sem limites/paginação, ordenado por ID.
             const { data, error } = await supabaseClient
                 .from(SUPABASE_TABLE)
-                .select('tmdb, imdb, titulo_original, titulo_traduzido, ano, pagina, pasta, data_release, link_imagem, sinopse, cores')
+                .select('id, tmdb, imdb, titulo_original, titulo_traduzido, ano, pagina, pasta, data_release, link_imagem, sinopse, cores, pais')
                 .order('id', { ascending: true });
 
-            if (error) {
-                console.error('Erro ao buscar dados para backup:', error);
-                exibirMensagem(`Erro ao buscar dados para backup: ${error.message}`, 'error');
-                return;
-            }
+            if (error) throw error;
 
             const filmesParaBackup = data || [];
-            if (filmesParaBackup.length === 0) {
-                exibirMensagem('Nenhum registro encontrado para gerar o backup.', 'info');
-                return;
+            if (filmesParaBackup.length === 0) return exibirMensagem('Nenhum registro encontrado.', 'info');
+
+            const colunas = ['id', 'tmdb', 'imdb', 'titulo_original', 'titulo_traduzido', 'ano', 'pagina', 'pasta', 'data_release', 'link_imagem', 'sinopse', 'cores', 'pais'];
+            const nomeTabela = SUPABASE_TABLE;
+
+            // Início do arquivo sem comandos de configuração (SET) que podem falhar
+            let sqlContent = `-- BACKUP ALBUM FILMES\n-- Gerado em: ${new Date().toLocaleString()}\n\n`;
+
+            const recordsPerInsert = 50;
+
+            for (let i = 0; i < filmesParaBackup.length; i += recordsPerInsert) {
+                const chunk = filmesParaBackup.slice(i, i + recordsPerInsert);
+
+                sqlContent += `INSERT INTO "${nomeTabela}" (${colunas.map(c => `"${c}"`).join(', ')}) VALUES\n`;
+
+                const valuesLines = chunk.map((filme, idx) => {
+                    const values = colunas.map(col => {
+                        const val = filme[col];
+                        if (val === null || val === undefined) return 'NULL';
+                        if (typeof val === 'string') {
+                            // Escapa aspas simples e limpa quebras de linha/caracteres invisíveis
+                            const escaped = val.replace(/'/g, "''").replace(/[\n\r\t]/g, " ");
+                            return `'${escaped}'`;
+                        }
+                        return val;
+                    });
+
+                    const isLastInChunk = idx === chunk.length - 1;
+                    return `(${values.join(',')})${isLastInChunk ? ';' : ','}`;
+                });
+
+                sqlContent += valuesLines.join('\n') + '\n\n';
             }
 
-            // 3. Define as colunas para o comando INSERT
-            const colunas = [
-                'tmdb', 'imdb', 'titulo_original', 'titulo_traduzido', 'ano', 'pagina',
-                'pasta', 'data_release', 'link_imagem', 'sinopse', 'cores'
-            ];
+            // COMANDO DE SEQUÊNCIA SIMPLIFICADO (Para evitar erro de sintaxe)
+            sqlContent += `-- Ajustar contador de ID\n`;
+            sqlContent += `SELECT setval(pg_get_serial_sequence('"${nomeTabela}"', 'id'), coalesce((SELECT MAX(id) FROM "${nomeTabela}"), 1), true);\n`;
 
-            const nomeTabela = SUPABASE_TABLE; // Usando o nome da tabela original: 'album'
-
-            let sqlContent = `
--- Backup SQL gerado em: ${new Date().toISOString()}
--- Tabela: ${nomeTabela} (${filmesParaBackup.length} registros)
--- Colunas: ${colunas.join(', ')}
-
--- ATENÇÃO: Se for restaurar em um banco com dados existentes, considere apagar o conteúdo antes:
--- DELETE FROM "${nomeTabela}";
--- Caso queira reiniciar a contagem do ID:
--- ALTER SEQUENCE "public"."${nomeTabela}_id_seq" RESTART WITH 1; 
-
-INSERT INTO "${nomeTabela}" (${colunas.map(c => `"${c}"`).join(',')}) VALUES
-`;
-
-            const recordsPerInsert = 10; // 10 registros por comando VALUES
-            let valuesGroup = [];
-
-            filmesParaBackup.forEach((filme, index) => {
-                const values = colunas.map(col => formatarValorSQL(filme[col]));
-                const valuesString = `\t(${values.join(',')})`;
-
-                valuesGroup.push(valuesString);
-
-                // Se atingiu o limite ou é o último registro
-                if (valuesGroup.length === recordsPerInsert || index === filmesParaBackup.length - 1) {
-                    sqlContent += valuesGroup.join(',\n') + ';\n';
-
-                    // Adiciona um novo cabeçalho INSERT se não for o último comando
-                    if (index !== filmesParaBackup.length - 1) {
-                        sqlContent += `
-INSERT INTO "${nomeTabela}" (${colunas.map(c => `"${c}"`).join(',')}) VALUES
-`;
-                    }
-                    valuesGroup = [];
-                }
-            });
-
-            // 4. Cria o Blob e o Link de Download
+            // Nome do Arquivo conforme o seu padrão
             const dataAtual = new Date();
-            // Formato DD-MM-YYYY
-            const dataFormatada = `${dataAtual.getDate().toString().padStart(2, '0')}-${(dataAtual.getMonth() + 1).toString().padStart(2, '0')}-${dataAtual.getFullYear()}`;
-            const nomeArquivo = `ALBUM - backup - ${dataFormatada}.sql`;
+            const dia = dataAtual.getDate().toString().padStart(2, '0');
+            const mes = (dataAtual.getMonth() + 1).toString().padStart(2, '0');
+            const ano = dataAtual.getFullYear();
+            const nomeArquivo = `ALBUM - backup - ${dia}-${mes}-${ano}.sql`;
 
             const blob = new Blob([sqlContent], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-
             const link = document.createElement('a');
             link.href = url;
             link.download = nomeArquivo;
-
-            // Simula o clique para iniciar o download
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
 
-            // exibirMensagem(`Backup "${nomeArquivo}" gerado e baixado com sucesso!`, 'info');
-
         } catch (e) {
-            console.error('Erro fatal ao gerar backup:', e);
-            exibirMensagem(`Erro fatal ao gerar backup: ${e.message}`, 'error');
+            console.error('Erro no backup:', e);
+            exibirMensagem(`Erro: ${e.message}`, 'error');
         } finally {
             loadingSpinner.classList.add('hidden');
             loadingSpinner.classList.remove('flex');
         }
     });
+}
+
+// Função auxiliar para download
+function baixarArquivo(blob, nome) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nome;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 /***************************************************/
@@ -1383,3 +1406,79 @@ window.onload = async function () {
     await carregarFilmes(true);
     alternarBusca('titulo');
 };
+
+
+function getFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length !== 2) return '';
+    const codePoints = countryCode
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
+
+function atualizarBandeiraModal(countryCode) {
+    const container = document.getElementById('bandeira-modal');
+    if (!container) return;
+
+    if (countryCode) {
+        container.innerHTML = `<img src="https://flagcdn.com/w40/${countryCode.toLowerCase()}.png" 
+                                    class="w-6 h-auto rounded-sm shadow-md" 
+                                    title="País: ${countryCode}">`;
+    } else {
+        container.innerHTML = '';
+    }
+}
+//
+// // Função de Varredura que você vai chamar no console
+// async function atualizarPaisesNoBanco() {
+//     console.log("🚀 Iniciando varredura de países...");
+//
+//     // Busca registros que não têm a coluna 'pais' preenchida
+//     // Certifique-se de ter criado a coluna 'pais' no Supabase antes!
+//     const { data: filmesSemPais, error } = await supabaseClient
+//         .from(SUPABASE_TABLE)
+//         .select('id, tmdb')
+//         .is('pais', null);
+//
+//     if (error) {
+//         console.error("❌ Erro ao buscar filmes no Supabase:", error);
+//         return;
+//     }
+//
+//     if (!filmesSemPais || filmesSemPais.length === 0) {
+//         console.log("✅ Todos os filmes já possuem país ou não há filmes para atualizar.");
+//         return;
+//     }
+//
+//     console.log(`🔎 Encontrados ${filmesSemPais.length} filmes para atualizar.`);
+//
+//     for (const filme of filmesSemPais) {
+//         if (!filme.tmdb) continue;
+//
+//         try {
+//             const url = `https://api.themoviedb.org/3/movie/${filme.tmdb}?api_key=${TMDB_API_KEY}`;
+//             const response = await fetch(url);
+//             const movieData = await response.json();
+//
+//             if (movieData.production_countries && movieData.production_countries.length > 0) {
+//                 const countryCode = movieData.production_countries[0].iso_3166_1;
+//
+//                 const { error: updateError } = await supabaseClient
+//                     .from(SUPABASE_TABLE)
+//                     .update({ pais: countryCode })
+//                     .eq('id', filme.id);
+//
+//                 if (updateError) throw updateError;
+//                 console.log(`✅ ID ${filme.id} atualizado para: ${countryCode} ${getFlagEmoji(countryCode)}`);
+//             }
+//
+//             // Pausa de 200ms para evitar bloqueio pela API do TMDb
+//             await new Promise(r => setTimeout(r, 200));
+//
+//         } catch (err) {
+//             console.error(`⚠️ Erro ao processar ID ${filme.id}:`, err);
+//         }
+//     }
+//     console.log("🏁 Varredura concluída!");
+// }
